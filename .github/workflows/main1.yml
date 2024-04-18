@@ -18,4 +18,4 @@ jobs:
           server: 185.18.55.159
           username: root
           password: yellowF310
-          server-dir:  /root/test
+          server-dir:  /root/test/
