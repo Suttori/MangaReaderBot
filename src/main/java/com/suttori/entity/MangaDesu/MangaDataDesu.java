@@ -2,7 +2,7 @@ package com.suttori.entity.MangaDesu;
 
 import java.util.List;
 
-public class MangaData {
+public class MangaDataDesu {
 
     private Long id;
     private String name;

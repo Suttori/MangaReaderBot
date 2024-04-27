@@ -4,33 +4,33 @@ import java.util.List;
 
 public class MangaChapters {
 
-    private MangaChapter first;
-    private MangaChapter last;
-    private MangaChapter updated;
+    private MangaChapterDesu first;
+    private MangaChapterDesu last;
+    private MangaChapterDesu updated;
     private Integer count;
     private List<MangaChapterItem> list;
 
-    public MangaChapter getFirst() {
+    public MangaChapterDesu getFirst() {
         return first;
     }
 
-    public void setFirst(MangaChapter first) {
+    public void setFirst(MangaChapterDesu first) {
         this.first = first;
     }
 
-    public MangaChapter getLast() {
+    public MangaChapterDesu getLast() {
         return last;
     }
 
-    public void setLast(MangaChapter last) {
+    public void setLast(MangaChapterDesu last) {
         this.last = last;
     }
 
-    public MangaChapter getUpdated() {
+    public MangaChapterDesu getUpdated() {
         return updated;
     }
 
-    public void setUpdated(MangaChapter updated) {
+    public void setUpdated(MangaChapterDesu updated) {
         this.updated = updated;
     }
 

@@ -47,17 +47,17 @@ public class ScheduledTasks {
 
     //@Scheduled(cron = "0 */40 * * * *")
     public void ScheduledNotification() {
-        logger.info("ScheduledNotification");
-        Map<Long, List<Long>> prepareList = notificationEntityRepository.findAll().stream()
-                .collect(Collectors.groupingBy(NotificationEntity::getMangaId,
-                        Collectors.mapping(NotificationEntity::getUserId, Collectors.toList())));
-        for (Long key : prepareList.keySet()) {
-            Long lastChapter = Long.valueOf(mangaService.getMangaData(key).getChapters().getLast().getCh());
-            if (!notificationChapterMappingRepository.findByMangaId(key).getChapter().equals(lastChapter)) {
-                notificationChapterMappingRepository.setChapter(lastChapter, key);
-                senderService.sendNotificationToUsers(prepareList.get(key), key, lastChapter);
-            }
-        }
+//        logger.info("ScheduledNotification");
+//        Map<String, List<Long>> prepareList = notificationEntityRepository.findAll().stream()
+//                .collect(Collectors.groupingBy(NotificationEntity::getMangaId,
+//                        Collectors.mapping(NotificationEntity::getUserId, Collectors.toList())));
+//        for (String key : prepareList.keySet()) {
+//            Long lastChapter = Long.valueOf(mangaService.getMangaData(key).getChapters().getLast().getCh());
+//            if (!notificationChapterMappingRepository.findByMangaId(key).getChapter().equals(lastChapter)) {
+//                notificationChapterMappingRepository.setChapter(lastChapter, key);
+//                senderService.sendNotificationToUsers(prepareList.get(key), key, lastChapter);
+//            }
+//        }
     }
 
     //@Scheduled(cron = "0 57 22 * * *")

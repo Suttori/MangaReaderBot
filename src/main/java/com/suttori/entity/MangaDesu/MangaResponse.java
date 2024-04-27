@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class MangaResponse {
 
     @JsonProperty("response")
-    private MangaData response;
+    private MangaDataDesu response;
     @JsonProperty("pageNavParams")
     private PageNavParams pageNavParams;
 
@@ -17,11 +17,11 @@ public class MangaResponse {
         this.pageNavParams = pageNavParams;
     }
 
-    public MangaData getResponse() {
+    public MangaDataDesu getResponse() {
         return response;
     }
 
-    public void setResponse(MangaData response) {
+    public void setResponse(MangaDataDesu response) {
         this.response = response;
     }
 }

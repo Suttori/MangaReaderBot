@@ -4,7 +4,7 @@ import com.suttori.dao.*;
 import com.suttori.entity.Enums.UserStatus;
 import com.suttori.entity.FriendEntity;
 import com.suttori.entity.HistoryEntity;
-import com.suttori.entity.MangaDesu.MangaData;
+import com.suttori.entity.MangaDesu.MangaDataDesu;
 import com.suttori.entity.MangaStatusParameter;
 import com.suttori.entity.User;
 import com.suttori.telegram.TelegramSender;
@@ -30,7 +30,6 @@ import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -185,18 +184,18 @@ public class ProfileService {
         List<InlineQueryResult> inlineQueryResultList = new ArrayList<>();
         int i = 0;
         for (HistoryEntity historyEntity : historyEntities) {
-            MangaData mangaData = mangaService.getMangaData(historyEntity.getMangaId());
+            MangaDataDesu mangaDataDesu = mangaService.getMangaData(historyEntity.getMangaId());
             StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.append("Рейтинг: ").append(mangaData.getScore());
-            stringBuilder.append(" | Год: ").append(new SimpleDateFormat("yyyy").format(new Date(mangaData.getAired_on() * 1000))).append(" | Тип: ").append(mangaData.getKind()).append("\n");
-            stringBuilder.append("Статус: ").append(util.getStatus(mangaData.getStatus())).append("\n");
-            stringBuilder.append("Жанр: ").append(util.getGenres(mangaData.getGenres()));
+            stringBuilder.append("Рейтинг: ").append(mangaDataDesu.getScore());
+            stringBuilder.append(" | Год: ").append(new SimpleDateFormat("yyyy").format(new Date(mangaDataDesu.getAired_on() * 1000))).append(" | Тип: ").append(mangaDataDesu.getKind()).append("\n");
+            stringBuilder.append("Статус: ").append(util.getStatus(mangaDataDesu.getStatus())).append("\n");
+            stringBuilder.append("Жанр: ").append(util.getGenres(mangaDataDesu.getGenres()));
             inlineQueryResultList.add(InlineQueryResultArticle.builder()
                     .id(inlineQuery.getFrom().getId() + "" + i++)
-                    .title(mangaData.getRussian())
+                    .title(mangaDataDesu.getRussian())
                     .description(stringBuilder.toString())
-                    .thumbnailUrl(mangaData.getImage().getOriginal())
-                    .inputMessageContent(new InputTextMessageContent("mangaId\n" + mangaData.getId())).build());
+                    .thumbnailUrl(mangaDataDesu.getImage().getOriginal())
+                    .inputMessageContent(new InputTextMessageContent("mangaId\n" + mangaDataDesu.getId())).build());
         }
         telegramSender.sendAnswerInlineQuery(AnswerInlineQuery.builder()
                 .results(inlineQueryResultList)
@@ -225,19 +224,19 @@ public class ProfileService {
         List<InlineQueryResult> inlineQueryResultList = new ArrayList<>();
         int i = 0;
         for (MangaStatusParameter mangaStatusParameter : statusParameterList) {
-            MangaData mangaData = mangaService.getMangaData(mangaStatusParameter.getMangaId());
+            MangaDataDesu mangaDataDesu = mangaService.getMangaData(mangaStatusParameter.getMangaId());
 
             StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.append("Рейтинг: ").append(mangaData.getScore());
-            stringBuilder.append(" | Год: ").append(new SimpleDateFormat("yyyy").format(new Date(mangaData.getAired_on() * 1000))).append(" | Тип: ").append(mangaData.getKind()).append("\n");
-            stringBuilder.append("Статус: ").append(util.getStatus(mangaData.getStatus())).append("\n");
-            stringBuilder.append("Жанр: ").append(mangaData.getGenres());
+            stringBuilder.append("Рейтинг: ").append(mangaDataDesu.getScore());
+            stringBuilder.append(" | Год: ").append(new SimpleDateFormat("yyyy").format(new Date(mangaDataDesu.getAired_on() * 1000))).append(" | Тип: ").append(mangaDataDesu.getKind()).append("\n");
+            stringBuilder.append("Статус: ").append(util.getStatus(mangaDataDesu.getStatus())).append("\n");
+            stringBuilder.append("Жанр: ").append(mangaDataDesu.getGenres());
             inlineQueryResultList.add(InlineQueryResultArticle.builder()
                     .id(inlineQuery.getFrom().getId() + "" + i++)
-                    .title(mangaData.getRussian())
+                    .title(mangaDataDesu.getRussian())
                     .description(stringBuilder.toString())
-                    .thumbnailUrl(mangaData.getImage().getOriginal())
-                    .inputMessageContent(new InputTextMessageContent("mangaId\n" + mangaData.getId())).build());
+                    .thumbnailUrl(mangaDataDesu.getImage().getOriginal())
+                    .inputMessageContent(new InputTextMessageContent("mangaId\n" + mangaDataDesu.getId())).build());
         }
         telegramSender.sendAnswerInlineQuery(AnswerInlineQuery.builder()
                 .results(inlineQueryResultList)
@@ -247,31 +246,31 @@ public class ProfileService {
                 .inlineQueryId(inlineQuery.getId()).build());
     }
 
-    public void sendMangaViaProfile(CallbackQuery callbackQuery) {
-        Long mangaId = Long.valueOf(util.parseValue(callbackQuery.getData())[1]);
-        Long userId = callbackQuery.getFrom().getId();
-
-        InlineKeyboardMarkup inlineKeyboardMarkup = mangaService.getMangaButtonsViaProfile(callbackQuery.getData(), mangaId, userId);
-
-        if (callbackQuery.getData().contains("sendMangaViaFavorites")) {
-            inlineKeyboardMarkup.getKeyboard().add(new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Назад")).callbackData("clickMyFavoritesViaFavorites").build()));
-        } else {
-            inlineKeyboardMarkup.getKeyboard().add(new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Назад")).callbackData("clickBackToHistory\n" + 1).build()));
-        }
-
-        MangaData mangaData = mangaService.getMangaData(mangaId);
-        Message message = telegramSender.sendEditMessageMedia(EditMessageMedia.builder()
-                .messageId(callbackQuery.getMessage().getMessageId())
-                .media(new InputMediaPhoto(mangaData.getImage().getOriginal()))
-                .chatId(userId).build());
-
-        telegramSender.sendEditMessageCaption(EditMessageCaption.builder()
-                .chatId(userId)
-                .messageId(message.getMessageId())
-                .parseMode("HTML")
-                .replyMarkup(inlineKeyboardMarkup)
-                .caption(mangaService.getMangaText(mangaData)).build());
-    }
+//    public void sendMangaViaProfile(CallbackQuery callbackQuery) {
+//        Long mangaId = Long.valueOf(util.parseValue(callbackQuery.getData())[1]);
+//        Long userId = callbackQuery.getFrom().getId();
+//
+//        InlineKeyboardMarkup inlineKeyboardMarkup = mangaService.getMangaButtonsViaProfile(callbackQuery.getData(), mangaId, userId);
+//
+//        if (callbackQuery.getData().contains("sendMangaViaFavorites")) {
+//            inlineKeyboardMarkup.getKeyboard().add(new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Назад")).callbackData("clickMyFavoritesViaFavorites").build()));
+//        } else {
+//            inlineKeyboardMarkup.getKeyboard().add(new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Назад")).callbackData("clickBackToHistory\n" + 1).build()));
+//        }
+//
+//        MangaDataDesu mangaDataDesu = mangaService.getMangaData(mangaId);
+//        Message message = telegramSender.sendEditMessageMedia(EditMessageMedia.builder()
+//                .messageId(callbackQuery.getMessage().getMessageId())
+//                .media(new InputMediaPhoto(mangaDataDesu.getImage().getOriginal()))
+//                .chatId(userId).build());
+//
+//        telegramSender.sendEditMessageCaption(EditMessageCaption.builder()
+//                .chatId(userId)
+//                .messageId(message.getMessageId())
+//                .parseMode("HTML")
+//                .replyMarkup(inlineKeyboardMarkup)
+//                .caption(mangaService.getMangaText(mangaDataDesu)).build());
+//    }
 
     public void clickMyFriend(CallbackQuery callbackQuery) {
         InlineKeyboardMarkup inlineKeyboardMarkup = getButtonsFriendList(callbackQuery);

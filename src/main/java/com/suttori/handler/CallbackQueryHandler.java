@@ -1,5 +1,6 @@
 package com.suttori.handler;
 
+import com.suttori.config.ServiceConfig;
 import com.suttori.entity.User;
 import com.suttori.service.*;
 import com.suttori.util.Util;
@@ -22,11 +23,12 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
     private LocaleService localeService;
     private MangaService mangaService;
     private ProfileService profileService;
+    private ServiceConfig serviceConfig;
 
     @Autowired
     public CallbackQueryHandler(UserService userService, SettingService settingService,
                                 AdminService adminService, SenderService senderService,
-                                Util util, LocaleService localeService, MangaService mangaService, ProfileService profileService) {
+                                Util util, LocaleService localeService, MangaService mangaService, ProfileService profileService, ServiceConfig serviceConfig) {
         this.userService = userService;
         this.settingService = settingService;
         this.adminService = adminService;
@@ -35,6 +37,7 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
         this.localeService = localeService;
         this.mangaService = mangaService;
         this.profileService = profileService;
+        this.serviceConfig = serviceConfig;
     }
 
     @Override
@@ -70,12 +73,17 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
 
 
         if (callbackQuery.getData().contains("getChapters\n") || callbackQuery.getData().contains("onFirstPage\n") || callbackQuery.getData().contains("onLastPage\n") || callbackQuery.getData().contains("prevGapPage\n") || callbackQuery.getData().contains("prevPage\n") || callbackQuery.getData().contains("nextPage\n") || callbackQuery.getData().contains("nextGapPage\n")) {
-            mangaService.getChapters(callbackQuery);
+            serviceConfig.mangaServices().get(user.getCurrentMangaCatalog()).getMangaChaptersButton(callbackQuery);
+
+            //mangaService.getChapters(callbackQuery);
             return;
         }
 
         if (callbackQuery.getData().contains("chapter\n") || callbackQuery.getData().contains("prevChapter\n") || callbackQuery.getData().contains("nextChapter\n")) {
-            mangaService.getChapterFromCallbackHandler(callbackQuery);
+            serviceConfig.mangaServices().get(user.getCurrentMangaCatalog()).getChapterFromCallbackHandler(callbackQuery);
+
+
+            //mangaService.getChapterFromCallbackHandler(callbackQuery);
             return;
         }
 
@@ -99,13 +107,8 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
             return;
         }
 
-        if (callbackQuery.getData().contains("clickNotification\n") || callbackQuery.getData().contains("clickNotificationViaHistory\n") || callbackQuery.getData().contains("clickNotificationViaFavorites\n")) {
+        if (callbackQuery.getData().contains("clickNotification\n")) {
             mangaService.clickNotification(callbackQuery);
-            return;
-        }
-
-        if (callbackQuery.getData().contains("sendMangaViaHistory\n") || callbackQuery.getData().contains("sendMangaViaFavorites\n")) {
-            profileService.sendMangaViaProfile(callbackQuery);
             return;
         }
 
@@ -171,9 +174,15 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
                 case "clickGetInfoAboutUser":
                     adminService.clickGetInfoAboutUser(callbackQuery);
                     return;
+                case "clickChooseCatalog":
+                    mangaService.clickChooseCatalog(callbackQuery);
+                    return;
 
             }
 
+            if (callbackQuery.getData().contains("chooseCatalog\n")) {
+                mangaService.catalogWasChosen(callbackQuery);
+            }
 
             if (callbackQuery.getData().contains("deleteAds - ")) {
                 adminService.deleteAds(callbackQuery);

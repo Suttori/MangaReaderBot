@@ -4,7 +4,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Entity(name = "NotificationChapterMapping")
 public class NotificationChapterMapping {
 
@@ -12,38 +16,15 @@ public class NotificationChapterMapping {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long mangaId;
+    private String mangaId;
     private Long chapter;
 
     public NotificationChapterMapping() {
     }
 
-    public NotificationChapterMapping(Long mangaId, Long chapter) {
+    public NotificationChapterMapping(String mangaId, Long chapter) {
         this.mangaId = mangaId;
         this.chapter = chapter;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getMangaId() {
-        return mangaId;
-    }
-
-    public void setMangaId(Long mangaId) {
-        this.mangaId = mangaId;
-    }
-
-    public Long getChapter() {
-        return chapter;
-    }
-
-    public void setChapter(Long chapter) {
-        this.chapter = chapter;
-    }
 }

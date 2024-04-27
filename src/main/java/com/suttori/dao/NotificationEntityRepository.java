@@ -9,5 +9,5 @@ import java.util.ArrayList;
 @Repository
 public interface NotificationEntityRepository extends JpaRepository<NotificationEntity, Long> {
 
-    NotificationEntity findByMangaIdAndUserId(Long mangaId, Long userId);
+    NotificationEntity findByMangaIdAndUserId(String mangaId, Long userId);
 }

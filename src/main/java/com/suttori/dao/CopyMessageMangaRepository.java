@@ -1,6 +1,6 @@
 package com.suttori.dao;
 
-import com.suttori.entity.MangaDesu.CopyMessageManga;
+import com.suttori.entity.MangaChapter;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -12,11 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 
 @Repository
-public interface CopyMessageMangaRepository extends JpaRepository<CopyMessageManga, Long> {
+public interface CopyMessageMangaRepository extends JpaRepository<MangaChapter, Long> {
 
-    CopyMessageManga findFirstByMangaIdAndVolAndChapter(Long mangaId, int vol, int chapter);
+    MangaChapter findFirstByMangaIdAndVolAndChapter(String mangaId, int vol, int chapter);
 
-    ArrayList<CopyMessageManga> findAllByBackupMessageIdIsNull();
+    ArrayList<MangaChapter> findAllByBackupMessageIdIsNull();
 
     @Transactional
     void deleteByMessageId(Integer messageId);

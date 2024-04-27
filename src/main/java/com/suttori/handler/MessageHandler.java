@@ -1,5 +1,6 @@
 package com.suttori.handler;
 
+import com.suttori.config.ServiceConfig;
 import com.suttori.entity.User;
 import com.suttori.service.*;
 import com.suttori.telegram.TelegramSender;
@@ -26,11 +27,13 @@ public class MessageHandler implements Handler<Update> {
     private TelegramSender telegramSender;
     private ProfileService profileService;
     private Util util;
+    private ServiceConfig serviceConfig;
 
     @Autowired
     public MessageHandler(ButtonService buttonService, UserService userService, SettingService settingService,
                           AdminService adminService, SenderService senderService, ReferralService referralService,
-                          LocaleService localeService, MangaService mangaService, TelegramSender telegramSender, Util util, ProfileService profileService) {
+                          LocaleService localeService, MangaService mangaService, TelegramSender telegramSender, Util util,
+                          ProfileService profileService, ServiceConfig serviceConfig) {
         this.buttonService = buttonService;
         this.userService = userService;
         this.settingService = settingService;
@@ -42,6 +45,7 @@ public class MessageHandler implements Handler<Update> {
         this.telegramSender = telegramSender;
         this.util = util;
         this.profileService = profileService;
+        this.serviceConfig = serviceConfig;
     }
 
     @Override
@@ -171,7 +175,8 @@ public class MessageHandler implements Handler<Update> {
 
         if (message.hasText() && message.getText().contains("mangaId\n")) {
             telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
-            mangaService.sendMangaById(message.getFrom().getId(), Long.valueOf(util.parseValue(message.getText())[1]));
+            //mangaService.sendMangaById(message.getFrom().getId(), Long.valueOf(util.parseValue(message.getText())[1]));
+            serviceConfig.mangaServices().get(user.getCurrentMangaCatalog()).sendMangaById(message.getFrom().getId(), message.getText());
         }
 
     }

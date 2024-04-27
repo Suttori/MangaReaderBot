@@ -4,7 +4,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import lombok.Getter;
+import lombok.Setter;
 
+
+@Getter
+@Setter
 @Entity(name = "NotificationEntity")
 public class NotificationEntity {
 
@@ -13,38 +18,16 @@ public class NotificationEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long mangaId;
+    private String mangaId;
     private Long userId;
 
     public NotificationEntity() {
     }
 
-    public NotificationEntity(Long mangaId, Long userId) {
+    public NotificationEntity(String mangaId, Long userId) {
         this.mangaId = mangaId;
         this.userId = userId;
     }
 
-    public Long getId() {
-        return id;
-    }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public Long getMangaId() {
-        return mangaId;
-    }
-
-    public void setMangaId(Long mangaId) {
-        this.mangaId = mangaId;
-    }
 }

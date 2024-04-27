@@ -1,5 +1,6 @@
 package com.suttori.telegram;
 
+import com.suttori.config.BotConfig;
 import com.suttori.entity.PostToDelete;
 import com.suttori.entity.User;
 import feign.Response;
@@ -59,13 +60,11 @@ public class TelegramSender {
 
     public void sendEditMessageText(EditMessageText editMessageText) {
         logger.info("sendEditMessageText " + editMessageText.getChatId());
-        executorService.submit(() -> {
-            try {
-                telegramClient.executeAsync(editMessageText);
-            } catch (TelegramApiException e) {
-                logger.error("Failed sendEditMessageText " + editMessageText.getChatId(), e);
-            }
-        });
+        try {
+            telegramClient.execute(editMessageText);
+        } catch (TelegramApiException e) {
+            logger.error("Failed sendEditMessageText " + editMessageText.getChatId(), e);
+        }
     }
 
     public void sendAnswerCallbackQuery(AnswerCallbackQuery answerCallbackQuery) {
@@ -121,13 +120,12 @@ public class TelegramSender {
 
     public void sendEditMessageReplyMarkup(EditMessageReplyMarkup editMessageReplyMarkup) {
         logger.info("sendEditMessageReplyMarkup " + editMessageReplyMarkup.getChatId());
-        executorService.submit(() -> {
-            try {
-                telegramClient.executeAsync(editMessageReplyMarkup);
-            } catch (TelegramApiException e) {
-                logger.error("sendEditMessageReplyMarkup " + editMessageReplyMarkup.getChatId(), e);
-            }
-        });
+        try {
+            telegramClient.executeAsync(editMessageReplyMarkup);
+        } catch (TelegramApiException e) {
+            logger.error("sendEditMessageReplyMarkup " + editMessageReplyMarkup.getChatId(), e);
+        }
+
     }
 
     public void sendForwardMessage(ForwardMessage forwardMessage) {

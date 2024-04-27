@@ -36,6 +36,7 @@ public class User {
     private String temporarySourceStickerSetName;
     private String temporaryFileUniqueId;
     private Timestamp lastActivity;
+    private String currentMangaCatalog;
 
 
     public User() {
@@ -56,6 +57,13 @@ public class User {
         this.accessStatus = accessStatus;
         this.position = position;
         this.balance = balance;
+    }
+
+    public String getCurrentMangaCatalog() {
+        return currentMangaCatalog;
+    }
+    public void setCurrentMangaCatalog(String currentMangaCatalog) {
+        this.currentMangaCatalog = currentMangaCatalog;
     }
 
     public Timestamp getLastActivity() {

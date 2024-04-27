@@ -26,6 +26,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     ArrayList<User> findAllByLastActivityAfter(Timestamp date);
 
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE \"user\" SET current_manga_catalog = ? WHERE user_id = ?", nativeQuery = true)
+    void setCurrentMangaCatalog(@Param("current_manga_catalog") String current_manga_catalog, @Param("user_id") Long user_id);
+
     @Transactional
     @Modifying
     @Query(value = "UPDATE \"user\" SET last_activity = ? WHERE user_id = ?", nativeQuery = true)
