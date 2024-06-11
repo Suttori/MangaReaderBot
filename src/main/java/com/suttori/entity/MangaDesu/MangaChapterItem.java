@@ -1,5 +1,8 @@
 package com.suttori.entity.MangaDesu;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MangaChapterItem {
 
     private Long id;

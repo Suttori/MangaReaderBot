@@ -14,6 +14,6 @@ public class Volume {
 
     private String volume;
     private int count;
-    private Map<String, Chapter> chapters;
+    private Map<String, ChapterMangaDex> chapters;
 
 }

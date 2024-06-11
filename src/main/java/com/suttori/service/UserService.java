@@ -105,4 +105,8 @@ public class UserService {
     public void setLastActivity(Long userId) {
         userRepository.setLastActivity(new Timestamp(System.currentTimeMillis()), userId);
     }
+
+    public void setSortParam(String param, Long userId) {
+        userRepository.setSortParam(param, userId);
+    }
 }

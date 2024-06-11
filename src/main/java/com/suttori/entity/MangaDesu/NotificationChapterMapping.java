@@ -17,14 +17,16 @@ public class NotificationChapterMapping {
     private Long id;
 
     private String mangaId;
-    private Long chapter;
+    private String chapter;
+    private String catalogName;
 
     public NotificationChapterMapping() {
     }
 
-    public NotificationChapterMapping(String mangaId, Long chapter) {
+    public NotificationChapterMapping(String mangaId, String chapter, String catalogName) {
         this.mangaId = mangaId;
         this.chapter = chapter;
+        this.catalogName = catalogName;
     }
 
 }

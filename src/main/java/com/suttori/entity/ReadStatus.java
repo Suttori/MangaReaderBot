@@ -1,4 +1,4 @@
-package com.suttori.entity.MangaDesu;
+package com.suttori.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -7,31 +7,31 @@ import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.sql.Timestamp;
 
+@Entity(name = "ReadStatus")
 @Getter
 @Setter
-@Entity(name = "NotificationEntity")
-public class NotificationEntity {
-
+public class ReadStatus {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private String mangaId;
-    private Long mangaDatabaseId;
+    private String chapterId;
     private Long userId;
+    private Timestamp updateAt;
     private String catalogName;
 
-    public NotificationEntity() {
+
+    public ReadStatus() {
     }
 
-    public NotificationEntity(String mangaId, Long mangaDatabaseId, Long userId, String catalogName) {
+    public ReadStatus(String mangaId, String chapterId, Long userId, Timestamp updateAt, String catalogName) {
         this.mangaId = mangaId;
-        this.mangaDatabaseId = mangaDatabaseId;
+        this.chapterId = chapterId;
         this.userId = userId;
+        this.updateAt = updateAt;
         this.catalogName = catalogName;
     }
-
-
 }

@@ -1,5 +1,6 @@
 package com.suttori.entity.MangaDex.Manga;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,6 +13,7 @@ public class MangaAttributes {
 
     private Map<String, String> title;
     private List<Map<String, String>> altTitles;
+    @JsonDeserialize(using = SafeDescriptionDeserializer.class)
     private Map<String, String> description;
     private Boolean isLocked;
     private Map<String, String> links;

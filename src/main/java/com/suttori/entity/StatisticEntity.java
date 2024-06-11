@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import lombok.Getter;
 
 import java.sql.Timestamp;
 
@@ -13,19 +14,21 @@ public class StatisticEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long mangaId;
+    private String mangaId;
     private Long userId;
     private String name;
     private String russian;
-    private int vol;
-    private int ch;
+    private String vol;
+    private String ch;
+    @Getter
+    private String catalogName;
     private Timestamp addedAt;
 
 
     public StatisticEntity() {
     }
 
-    public StatisticEntity(Long mangaId, Long userId, String name, String russian, int vol, int ch, Timestamp addedAt) {
+    public StatisticEntity(String mangaId, Long userId, String name, String russian, String vol, String ch, Timestamp addedAt, String catalogName) {
         this.mangaId = mangaId;
         this.userId = userId;
         this.name = name;
@@ -33,6 +36,19 @@ public class StatisticEntity {
         this.vol = vol;
         this.ch = ch;
         this.addedAt = addedAt;
+        this.catalogName = catalogName;
+    }
+
+    public void setVol(String vol) {
+        this.vol = vol;
+    }
+
+    public void setCh(String ch) {
+        this.ch = ch;
+    }
+
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
     }
 
     public Long getId() {
@@ -43,11 +59,11 @@ public class StatisticEntity {
         this.id = id;
     }
 
-    public Long getMangaId() {
+    public String getMangaId() {
         return mangaId;
     }
 
-    public void setMangaId(Long mangaId) {
+    public void setMangaId(String mangaId) {
         this.mangaId = mangaId;
     }
 
@@ -75,20 +91,16 @@ public class StatisticEntity {
         this.russian = russian;
     }
 
-    public int getVol() {
+    public String getVol() {
         return vol;
     }
 
-    public void setVol(int vol) {
-        this.vol = vol;
-    }
-
-    public int getCh() {
+    public String getCh() {
         return ch;
     }
 
-    public void setCh(int ch) {
-        this.ch = ch;
+    public String getCatalogName() {
+        return catalogName;
     }
 
     public Timestamp getAddedAt() {

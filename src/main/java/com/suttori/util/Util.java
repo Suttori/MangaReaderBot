@@ -3,6 +3,7 @@ package com.suttori.util;
 
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
+import com.suttori.config.ServiceConfig;
 import com.suttori.entity.MangaDesu.MangaGenre;
 import com.suttori.service.LocaleService;
 import com.suttori.telegram.TelegramSender;
@@ -24,14 +25,13 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class Util {
 
     private TelegramSender telegramSender;
     private LocaleService localeService;
+
 
     @Autowired
     public Util(TelegramSender telegramSender, LocaleService localeService) {
@@ -51,6 +51,15 @@ public class Util {
         return string.split("\n");
     }
 
+    public String getSourceName(String string) {
+        String sourceName = string.split("\n")[0];
+        if (sourceName.equals("desu.me") || sourceName.equals("mangadex.org")) {
+            return sourceName;
+        } else {
+            return null;
+        }
+    }
+
     public Integer sendWaitGIFAndAction(Long userId) {
         Integer messageId = telegramSender.sendDocument(SendDocument.builder()
                 .chatId(userId)
@@ -64,6 +73,13 @@ public class Util {
     }
 
     public void sendErrorMessage(String error, Long userId) {
+        telegramSender.send(SendMessage.builder()
+                .chatId(userId)
+                .text(error)
+                .build());
+    }
+
+    public void sendInfoMessage(String error, Long userId) {
         telegramSender.send(SendMessage.builder()
                 .chatId(userId)
                 .text(error)
@@ -123,6 +139,19 @@ public class Util {
             URL url = new URL(imageUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestProperty("Referer", "https://desu.win/");
+            try (InputStream in = connection.getInputStream()) {
+                byte[] imageBytes = in.readAllBytes();
+                return ImageDataFactory.create(imageBytes);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ImageData downloadImage(String imageUrl) {
+        try {
+            URL url = new URL(imageUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             try (InputStream in = connection.getInputStream()) {
                 byte[] imageBytes = in.readAllBytes();
                 return ImageDataFactory.create(imageBytes);

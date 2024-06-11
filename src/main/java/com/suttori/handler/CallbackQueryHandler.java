@@ -71,34 +71,23 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
                 return;
         }
 
-
-        if (callbackQuery.getData().contains("getChapters\n") || callbackQuery.getData().contains("onFirstPage\n") || callbackQuery.getData().contains("onLastPage\n") || callbackQuery.getData().contains("prevGapPage\n") || callbackQuery.getData().contains("prevPage\n") || callbackQuery.getData().contains("nextPage\n") || callbackQuery.getData().contains("nextGapPage\n")) {
-            serviceConfig.mangaServices().get(user.getCurrentMangaCatalog()).getMangaChaptersButton(callbackQuery);
-
-            //mangaService.getChapters(callbackQuery);
+        if (callbackQuery.getData().contains("prevChapter\n") || callbackQuery.getData().contains("nextChapter\n")) {
+            serviceConfig.mangaServices().get(util.getSourceName(callbackQuery.getData())).getChapterFromCallbackHandler(callbackQuery);
             return;
         }
 
-        if (callbackQuery.getData().contains("chapter\n") || callbackQuery.getData().contains("prevChapter\n") || callbackQuery.getData().contains("nextChapter\n")) {
-            serviceConfig.mangaServices().get(user.getCurrentMangaCatalog()).getChapterFromCallbackHandler(callbackQuery);
-
-
-            //mangaService.getChapterFromCallbackHandler(callbackQuery);
-            return;
-        }
-
-        if (callbackQuery.getData().contains("changeStatus\n") || callbackQuery.getData().contains("changeStatusViaHistory") || callbackQuery.getData().contains("changeStatusViaFavorites")) {
-            mangaService.clickChangeMangaStatus(callbackQuery);
+        if (callbackQuery.getData().contains("\nchangeStatus\n")) {
+            serviceConfig.mangaServices().get(util.getSourceName(callbackQuery.getData())).clickChangeMangaStatus(callbackQuery);
             return;
         }
 
         if (callbackQuery.getData().contains("changeMangaStatus")) {
-            mangaService.clickMangaStatus(callbackQuery);
+            serviceConfig.mangaServices().get(util.getSourceName(callbackQuery.getData())).clickMangaStatus(callbackQuery);
             return;
         }
 
         if (callbackQuery.getData().contains("clickBackManga\n")) {
-            mangaService.clickBackManga(callbackQuery);
+            serviceConfig.mangaServices().get(util.getSourceName(callbackQuery.getData())).clickBackManga(callbackQuery);
             return;
         }
 
@@ -107,10 +96,19 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
             return;
         }
 
-        if (callbackQuery.getData().contains("clickNotification\n")) {
-            mangaService.clickNotification(callbackQuery);
+        if (callbackQuery.getData().contains("notification\n")) {
+            serviceConfig.mangaServices().get(util.getSourceName(callbackQuery.getData())).clickNotification(callbackQuery);
             return;
         }
+
+        if (callbackQuery.getData().contains("\nreadStatus\n")) {
+            serviceConfig.mangaServices().get(util.getSourceName(callbackQuery.getData())).clickReadStatus(callbackQuery);
+            return;
+        }
+
+
+
+
 
         if (callbackQuery.getData().contains("clickBackToProfile")) {
             profileService.clickBackToProfile(callbackQuery);
@@ -180,12 +178,19 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
 
             }
 
+            if (callbackQuery.getData().contains("chooseCatalog\nmangadex.org")) {
+                mangaService.chooseMangaDexCatalog(callbackQuery);
+                return;
+            }
+
             if (callbackQuery.getData().contains("chooseCatalog\n")) {
                 mangaService.catalogWasChosen(callbackQuery);
+                return;
             }
 
             if (callbackQuery.getData().contains("deleteAds - ")) {
                 adminService.deleteAds(callbackQuery);
+                return;
             }
 
             if (callbackQuery.getData().contains("click_link - ")) {

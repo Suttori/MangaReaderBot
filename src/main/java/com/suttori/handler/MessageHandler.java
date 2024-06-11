@@ -7,6 +7,8 @@ import com.suttori.telegram.TelegramSender;
 import com.suttori.util.Util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 
@@ -84,7 +86,7 @@ public class MessageHandler implements Handler<Update> {
                     return;
                 case "Случайная манга":
                     if (referralService.checkAccess(message)) {
-                        mangaService.getRandomManga(message.getFrom().getId());
+                        serviceConfig.mangaServices().get(user.getCurrentMangaCatalog()).getRandomManga(message.getFrom().getId());
                     }
                     return;
                 case "Профиль":
@@ -105,8 +107,40 @@ public class MessageHandler implements Handler<Update> {
                     return;
             }
 
-            if ((message.getText().equals("Админ панель") || message.getText().equals("Адмін панель") || message.getText().equals("Admin Panel")) && adminService.isAdmin(message.getFrom().getId())) {
-                adminService.createAdminPanel(message);
+            if (message.getText().contains("\nchapterId\n")) {
+                try {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    serviceConfig.mangaServices().get(util.getSourceName(message.getText())).getChapterFromMessageHandler(message);
+                } catch (NullPointerException e) {
+                    util.sendErrorMessage("Произошла ошибка при поиске главы, введен неправильный запрос или что-то другое. Перезапусти бот и, если ошибка повторится, то напиши в поддержку.", user.getUserId());
+                }
+                return;
+            }
+
+            if (message.getText().contains("\nmangaId\n")) {
+                try {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    serviceConfig.mangaServices().get(util.getSourceName(message.getText())).sendMangaById(message.getFrom().getId(), util.parseValue(message.getText())[2]);
+                } catch (NullPointerException e) {
+                    util.sendErrorMessage("Произошла ошибка при поиске манги, введен неправильный запрос или что-то другое. Перезапусти бот и, если ошибка повторится, то напиши в поддержку.", user.getUserId());
+                }
+                return;
+            }
+            if (message.getText().contains("chooseLanguageCodeMangaDex\n")) {
+                mangaService.setLanguageCodeMangaDexAndCatalog(message);
+                return;
+            }
+
+
+            if (message.getText().equals("sortDESC")) {
+                userService.setSortParam("sortDESC", user.getUserId());
+                telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                return;
+            }
+
+            if (message.getText().equals("sortASC")) {
+                userService.setSortParam("sortASC", user.getUserId());
+                telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
                 return;
             }
         }
@@ -164,8 +198,13 @@ public class MessageHandler implements Handler<Update> {
                 } else if (message.getText().equals("Стата по загрузкам")) {
                     adminService.getStatAboutDownloadChapters(message);
                     return;
+                } else if ((message.getText().equals("Админ панель") || message.getText().equals("Адмін панель") || message.getText().equals("Admin Panel"))) {
+                    adminService.createAdminPanel(message);
+                    return;
                 }
             }
+
+
         }
 
         if (message.hasText() && message.getText().contains("Приход") && adminService.isAdvertiser(message.getFrom().getId())) {
@@ -173,11 +212,6 @@ public class MessageHandler implements Handler<Update> {
             return;
         }
 
-        if (message.hasText() && message.getText().contains("mangaId\n")) {
-            telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
-            //mangaService.sendMangaById(message.getFrom().getId(), Long.valueOf(util.parseValue(message.getText())[1]));
-            serviceConfig.mangaServices().get(user.getCurrentMangaCatalog()).sendMangaById(message.getFrom().getId(), message.getText());
-        }
 
     }
 

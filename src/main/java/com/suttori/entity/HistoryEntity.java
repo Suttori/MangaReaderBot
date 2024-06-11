@@ -13,21 +13,31 @@ public class HistoryEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long mangaId;
+    private String mangaId;
     private Long userId;
     private String name;
     private String russian;
     private Timestamp updateAt;
+    private String catalogName;
 
     public HistoryEntity() {
     }
 
-    public HistoryEntity(Long mangaId, Long userId, String name, String russian, Timestamp updateAt) {
+    public HistoryEntity(String mangaId, Long userId, String name, String russian, Timestamp updateAt, String catalogName) {
         this.mangaId = mangaId;
         this.userId = userId;
         this.name = name;
         this.russian = russian;
         this.updateAt = updateAt;
+        this.catalogName = catalogName;
+    }
+
+    public String getCatalogName() {
+        return catalogName;
+    }
+
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
     }
 
     public Long getId() {
@@ -38,11 +48,11 @@ public class HistoryEntity {
         this.id = id;
     }
 
-    public Long getMangaId() {
+    public String getMangaId() {
         return mangaId;
     }
 
-    public void setMangaId(Long mangaId) {
+    public void setMangaId(String mangaId) {
         this.mangaId = mangaId;
     }
 

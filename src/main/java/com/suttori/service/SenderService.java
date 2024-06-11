@@ -380,7 +380,7 @@ public class SenderService {
         int counter = 0;
 
         Post post = new Post();
-        post.setText("В манге \"" + mangaService.getMangaData(mangaId).getRussian() + "\" вышла " + lastChapter + " глава!");
+        post.setText("В манге \"" + mangaService.getMangaData(String.valueOf(mangaId)).getRussian() + "\" вышла " + lastChapter + " глава!");
         post.setTextMessage(true);
         post.setDisableWebPagePreview(true);
         post.setDisableNotification(false);

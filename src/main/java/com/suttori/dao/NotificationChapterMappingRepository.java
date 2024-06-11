@@ -11,10 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public interface NotificationChapterMappingRepository extends JpaRepository<NotificationChapterMapping, Long> {
 
-//    NotificationChapterMapping findByMangaId(Long mangaId);
-//
-//    @Transactional
-//    @Modifying
-//    @Query(value = "UPDATE notification_chapter_mapping SET chapter = ? WHERE manga_id = ?", nativeQuery = true)
-//    void setChapter(@Param("chapter") Long chapter, @Param("manga_id") String manga_id);
+    NotificationChapterMapping findByMangaId(String mangaId);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE notification_chapter_mapping SET chapter = ? WHERE manga_id = ?", nativeQuery = true)
+    void setChapter(@Param("chapter") String chapter, @Param("manga_id") String manga_id);
 }

@@ -7,7 +7,7 @@ import java.util.List;
 
 @Getter
 @Setter
-public class Chapter {
+public class ChapterMangaDex {
 
     private String chapter;
     private String id;

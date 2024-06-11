@@ -1,11 +1,13 @@
 package com.suttori.entity.MangaDesu;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.suttori.entity.MangaDesu.MangaChapters;
 import com.suttori.entity.MangaDesu.MangaImage;
 import com.suttori.entity.MangaDesu.MangaTranslator;
 
 import java.util.List;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MangaDataAsSearchResult {
 
     private Long id;

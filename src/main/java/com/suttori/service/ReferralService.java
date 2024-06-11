@@ -67,7 +67,7 @@ public class ReferralService {
             return false;
         }
 
-        if (!userRepository.findByUserId(message.getChatId()).isAccessStatus()) {
+        if (!userRepository.findByUserId(message.getChatId()).getAccessStatus()) {
             userRepository.setAccessStatus(true, message.getChatId());
         }
         return true;

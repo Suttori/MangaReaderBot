@@ -13,13 +13,46 @@ public class MangaStatusParameter {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long mangaId;
+    private String mangaId;
+    private Long mangaDatabaseId;
     private Long userId;
     private String status;
     private String name;
     private String russian;
     private Timestamp addedAt;
+    private String catalogName;
 
+
+    public MangaStatusParameter() {
+    }
+
+    public MangaStatusParameter(String mangaId, Long mangaDatabaseId, Long userId, String status, String name, String russian, Timestamp addedAt, String catalogName) {
+        this.mangaId = mangaId;
+        this.mangaDatabaseId = mangaDatabaseId;
+        this.userId = userId;
+        this.status = status;
+        this.name = name;
+        this.russian = russian;
+        this.addedAt = addedAt;
+        this.catalogName = catalogName;
+    }
+
+
+    public Long getMangaDatabaseId() {
+        return mangaDatabaseId;
+    }
+
+    public void setMangaDatabaseId(Long mangaDatabaseId) {
+        this.mangaDatabaseId = mangaDatabaseId;
+    }
+
+    public String getCatalogName() {
+        return catalogName;
+    }
+
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
+    }
 
     public String getRussian() {
         return russian;
@@ -61,11 +94,11 @@ public class MangaStatusParameter {
         this.id = id;
     }
 
-    public Long getMangaId() {
+    public String getMangaId() {
         return mangaId;
     }
 
-    public void setMangaId(Long mangaId) {
+    public void setMangaId(String mangaId) {
         this.mangaId = mangaId;
     }
 

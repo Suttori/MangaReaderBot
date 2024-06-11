@@ -42,7 +42,7 @@ public class AdminService {
     private MessageService messageService;
     private Util util;
     private StatisticEntityRepository statisticEntityRepository;
-    private CopyMessageMangaRepository copyMessageMangaRepository;
+    private MangaChapterRepository mangaChapterRepository;
     private ReferralChannelRepository referralChannelRepository;
     private UserRepository userRepository;
     private ReferralLinkRepository referralLinkRepository;
@@ -55,7 +55,7 @@ public class AdminService {
 
     @Autowired
     public AdminService(TelegramSender telegramSender, MessageService messageService, Util util,
-                        StatisticEntityRepository statisticEntityRepository, CopyMessageMangaRepository copyMessageMangaRepository,
+                        StatisticEntityRepository statisticEntityRepository, MangaChapterRepository mangaChapterRepository,
                         ReferralChannelRepository referralChannelRepository, UserRepository userRepository,
                         ReferralLinkRepository referralLinkRepository, AdvertiserRepository advertiserRepository,
                         PostToDeleteRepository postToDeleteRepository, PostRepositoryInterface postRepositoryInterface,
@@ -65,7 +65,7 @@ public class AdminService {
         this.messageService = messageService;
         this.util = util;
         this.statisticEntityRepository = statisticEntityRepository;
-        this.copyMessageMangaRepository = copyMessageMangaRepository;
+        this.mangaChapterRepository = mangaChapterRepository;
         this.referralChannelRepository = referralChannelRepository;
         this.userRepository = userRepository;
         this.referralLinkRepository = referralLinkRepository;
@@ -114,7 +114,7 @@ public class AdminService {
             List<User> usersSubscribe = Optional.ofNullable(users).stream().flatMap(Collection::stream)
                     .filter(user -> {
                         try {
-                            return user.isAccessStatus();
+                            return user.getAccessStatus();
                         } catch (NullPointerException e) {
                             return false;
                         }
@@ -462,7 +462,7 @@ public class AdminService {
         List<User> usersSubscribe = Optional.ofNullable(users).stream().flatMap(Collection::stream)
                 .filter(user -> {
                     try {
-                        return user.isAccessStatus();
+                        return user.getAccessStatus();
                     } catch (NullPointerException e) {
                         return false;
                     }
@@ -491,7 +491,7 @@ public class AdminService {
             List<User> usersSubscribe = Optional.ofNullable(users).stream().flatMap(Collection::stream)
                     .filter(user -> {
                         try {
-                            return user.isAccessStatus();
+                            return user.getAccessStatus();
                         } catch (NullPointerException e) {
                             return false;
                         }
@@ -781,7 +781,7 @@ public class AdminService {
     public void writeDownloadChaptersStat() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
         StringBuilder stringBuilder = new StringBuilder("Всего глав загружено (уникальных): ");
-        Long allDownloadChapters = copyMessageMangaRepository.count();
+        Long allDownloadChapters = mangaChapterRepository.count();
         stringBuilder.append(allDownloadChapters).append("\n\nВсего глав загружено пользователями: ").append(statisticEntityRepository.count());
         stringBuilder.append("\n\nЗа последние сутки: ").append(statisticEntityRepository.findAllByAddedAt(new Timestamp(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1)), new Timestamp(System.currentTimeMillis())));
         stringBuilder.append("\n\nТоп 20 пользователей по загрузке:\n");

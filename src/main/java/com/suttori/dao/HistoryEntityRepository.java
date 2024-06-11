@@ -11,7 +11,7 @@ import java.util.List;
 @Repository
 public interface HistoryEntityRepository extends JpaRepository<HistoryEntity, Long> {
 
-    HistoryEntity findByMangaIdAndUserId(Long mangaId, Long userId);
+    HistoryEntity findByMangaIdAndUserId(String mangaId, Long userId);
 
     ArrayList<HistoryEntity> findAllByUserId(Long userId, Pageable pageable);
 }

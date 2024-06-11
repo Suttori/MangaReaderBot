@@ -14,6 +14,7 @@ import java.util.ArrayList;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
+
     User findByUserId(Long userId);
 
     ArrayList<User> findAllByReferral(String referral);
@@ -26,11 +27,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     ArrayList<User> findAllByLastActivityAfter(Timestamp date);
 
-
     @Transactional
     @Modifying
     @Query(value = "UPDATE \"user\" SET current_manga_catalog = ? WHERE user_id = ?", nativeQuery = true)
     void setCurrentMangaCatalog(@Param("current_manga_catalog") String current_manga_catalog, @Param("user_id") Long user_id);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE \"user\" SET language_code_for_catalog = ? WHERE user_id = ?", nativeQuery = true)
+    void setCurrentLanguageCodeForCatalog(@Param("language_code_for_catalog") String language_code_for_catalog, @Param("user_id") Long user_id);
 
     @Transactional
     @Modifying
@@ -41,6 +46,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query(value = "UPDATE \"user\" SET position = ? WHERE user_id = ?", nativeQuery = true)
     void setPosition(@Param("position") String position, @Param("user_id") Long user_id);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE \"user\" SET sort_param = ? WHERE user_id = ?", nativeQuery = true)
+    void setSortParam(@Param("sort_param") String sort_param, @Param("user_id") Long user_id);
 
     @Transactional
     @Modifying

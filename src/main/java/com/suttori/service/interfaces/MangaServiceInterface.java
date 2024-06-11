@@ -2,22 +2,20 @@ package com.suttori.service.interfaces;
 
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.layout.Document;
-import com.suttori.entity.MangaDesu.MangaChapters;
 import com.suttori.entity.MangaDesu.MangaDataDesu;
-import com.suttori.entity.MangaDex.Manga.MangaDataMangaDex;
 import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFprobe;
 import net.bramp.ffmpeg.builder.FFmpegBuilder;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegraph.api.objects.Node;
 
 import java.io.File;
 import java.net.URL;
 import java.util.List;
-import java.util.Map;
 
 @Component
 public interface MangaServiceInterface<T, R> {
@@ -26,27 +24,29 @@ public interface MangaServiceInterface<T, R> {
 
     void sendMangaById(Long userId, String string);
 
+    InlineKeyboardMarkup getMangaButtons(Long userId, String mangaId);
+
     T getMangaData(String mangaId);
 
     String getMangaText(T mangaData);
 
     void clickNotification(CallbackQuery callbackQuery);
 
-    List<?> getChapters(String mangaId);
+    List<?> getChaptersFromSource(String mangaId);
 
-    int getCurrentPage(CallbackQuery callbackQuery, int currentPage, int lastPage, int gap);
+    void getMangaChaptersButton(InlineQuery inlineQuery);
 
-    void getMangaChaptersButton(CallbackQuery callbackQuery);
-
-    void getMangaDataChapters(Long mangaId, Long mangaChapterItemsId);
+    T getMangaDataChapters(String mangaId, String mangaChapterItemsId);
 
     void getChapterFromCallbackHandler(CallbackQuery callbackQuery);
 
-    void getChapterHandler(MangaDataDesu mangaDataDesu, Long userId);
+    void getChapterFromMessageHandler(Message message);
 
-    void writeHistory(MangaDataDesu mangaDataDesu, Long userId);
+    void getChapterHandler(T mangaData, Long userId);
 
-    void writeStatistic(MangaDataDesu mangaDataDesu, Long userId);
+    void writeHistory(T mangaData, Long userId);
+
+    void writeStatistic(T mangaData, Long userId);
 
     void waitForUploadManhwa(Long userId, Long copyMessageMangaId, MangaDataDesu mangaDataDesu);
 
@@ -74,8 +74,6 @@ public interface MangaServiceInterface<T, R> {
 
     Integer sendWaitGIFAndAction(Long userId);
 
-    Integer sendWaitForUploadManhwa(Long userId);
-
     void deleteKeyboard(Integer messageId, Long userId);
 
     void getRandomManga(Long userId);
@@ -84,10 +82,12 @@ public interface MangaServiceInterface<T, R> {
 
     void clickMangaStatus(CallbackQuery callbackQuery);
 
-    InlineKeyboardMarkup getKeyboardForChangeStatus(String read, String planned, String finished, String postponed, Long mangaId);
+    InlineKeyboardMarkup getKeyboardForChangeStatus(String read, String planned, String finished, String postponed, String mangaId);
 
-    InlineKeyboardMarkup getKeyboardForChangeStatusViaProfile(String read, String planned, String finished, String postponed, Long mangaId, String viaProfile);
+    InlineKeyboardMarkup getKeyboardForChangeStatusViaProfile(String read, String planned, String finished, String postponed, String mangaId, String viaProfile);
 
     void clickBackManga(CallbackQuery callbackQuery);
+
+    void clickReadStatus(CallbackQuery callbackQuery);
 
 }

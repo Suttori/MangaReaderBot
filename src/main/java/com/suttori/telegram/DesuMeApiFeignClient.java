@@ -18,7 +18,7 @@ public interface DesuMeApiFeignClient {
     Response getMangaById(@PathVariable String id);
 
     @RequestMapping(method = RequestMethod.GET, value = "/manga/api/{mangaId}/chapter/{chapterId}")
-    Response getChapter(@PathVariable Long mangaId, @PathVariable Long chapterId);
+    Response getChapter(@PathVariable String mangaId, @PathVariable String chapterId);
 
 }
 
