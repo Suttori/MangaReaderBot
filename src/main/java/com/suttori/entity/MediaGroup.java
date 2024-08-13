@@ -4,9 +4,14 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity(name = "media_group")
+@Getter
+@Setter
 public class MediaGroup {
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,67 +46,5 @@ public class MediaGroup {
         this.isDocument = mediaGroup.isDocument();
     }
 
-    public boolean isPhoto() {
-        return isPhoto;
-    }
 
-    public void setPhoto(boolean photo) {
-        isPhoto = photo;
-    }
-
-    public boolean isVideo() {
-        return isVideo;
-    }
-
-    public void setVideo(boolean video) {
-        isVideo = video;
-    }
-
-    public boolean isAudio() {
-        return isAudio;
-    }
-
-    public void setAudio(boolean audio) {
-        isAudio = audio;
-    }
-
-    public boolean isDocument() {
-        return isDocument;
-    }
-
-    public void setDocument(boolean document) {
-        isDocument = document;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getPostId() {
-        return postId;
-    }
-
-    public void setPostId(Long postId) {
-        this.postId = postId;
-    }
-
-    public Long getChatId() {
-        return chatId;
-    }
-
-    public void setChatId(Long chatId) {
-        this.chatId = chatId;
-    }
-
-    public String getFieldId() {
-        return fieldId;
-    }
-
-    public void setFieldId(String fieldId) {
-        this.fieldId = fieldId;
-    }
 }

@@ -781,7 +781,7 @@ public class AdminService {
     public void writeDownloadChaptersStat() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
         StringBuilder stringBuilder = new StringBuilder("Всего глав загружено (уникальных): ");
-        Long allDownloadChapters = mangaChapterRepository.count();
+        Long allDownloadChapters = mangaChapterRepository.countAllByPdfStatusDownloadOrTelegraphStatusDownload("finished", "finished");
         stringBuilder.append(allDownloadChapters).append("\n\nВсего глав загружено пользователями: ").append(statisticEntityRepository.count());
         stringBuilder.append("\n\nЗа последние сутки: ").append(statisticEntityRepository.findAllByAddedAt(new Timestamp(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1)), new Timestamp(System.currentTimeMillis())));
         stringBuilder.append("\n\nТоп 20 пользователей по загрузке:\n");

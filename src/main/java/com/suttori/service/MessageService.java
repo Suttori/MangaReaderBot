@@ -19,56 +19,6 @@ public class MessageService {
 
     private final Logger logger = LoggerFactory.getLogger(MessageService.class);
 
-//    public List<SendMessage> createSendMessages(String text, Long chatId) {
-//        final var messages = new ArrayList<SendMessage>();
-//        for (int i = 0; i < text.length(); i += 4000) {
-//            messages.add(
-//                    createSendMessageWithMaxLength(
-//                            text.substring(i, Math.min(text.length(), i + 4000)), chatId
-//                    )
-//            );
-//        }
-//        return messages;
-//    }
-
-    public List<SendMessage> createSendMessages(String text, Long chatId) {
-        final var messages = new ArrayList<SendMessage>();
-
-        // Разбиваем текст по знакам переноса строки
-        String[] lines = text.split("\n\n");
-
-        // Текущая длина сообщения
-        int currentLength = 0;
-
-        // Текущее сообщение
-        StringBuilder currentMessage = new StringBuilder();
-
-        // Итерируем по строкам
-        for (String line : lines) {
-            // Если добавление текущей строки не превысит лимит
-            if (currentLength + line.length() <= 4000) {
-                // Добавляем строку к текущему сообщению
-                currentMessage.append(line).append("\n\n");
-                currentLength += line.length() + 1; // +1 для символа переноса строки
-            } else {
-                // Если превышен лимит, создаем новое сообщение
-                messages.add(createSendMessageWithMaxLength(currentMessage.toString(), chatId));
-
-                // Сбрасываем текущее сообщение и длину
-                currentMessage = new StringBuilder(line).append("\n\n");
-                currentLength = line.length() + 1; // +1 для символа переноса строки
-            }
-        }
-
-        // Добавляем последнее сообщение, если оно не пустое
-        if (currentLength > 0) {
-            messages.add(createSendMessageWithMaxLength(currentMessage.toString(), chatId));
-        }
-
-        return messages;
-    }
-
-
     public SendMessage createSendMessageWithMaxLength(String text, Long chatId) {
         return SendMessage
                 .builder()
@@ -77,10 +27,6 @@ public class MessageService {
                 .disableWebPagePreview(true)
                 .parseMode("HTML")
                 .build();
-    }
-
-    private String substringToTelegramLength(String s) {
-        return s.substring(0, Math.min(s.length(), 4000));
     }
 
     public EditMessageText createEditMessageWithoutButton(String textMessage, Integer messageId, Long chatId) {

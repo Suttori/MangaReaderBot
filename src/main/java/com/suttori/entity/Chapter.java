@@ -10,13 +10,16 @@ import java.util.List;
 
 @Getter
 @Setter
-@Entity(name = "copyMessageManga")
+@Entity
+@Table(name = "copy_message_manga")
 public class Chapter {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Integer messageId;
+    private Integer pdfMessageId;
+    private Integer telegraphMessageId;
     private Integer backupMessageId;
     private String catalogName;
     private String mangaId;
@@ -25,13 +28,16 @@ public class Chapter {
     @Column(unique = true)
     private String chapterId;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "next_chapter_id", referencedColumnName = "chapterId", foreignKey = @ForeignKey(name = "fk_next_chapter", foreignKeyDefinition = "FOREIGN KEY (next_chapter_id) REFERENCES copy_message_manga(chapter_id) ON DELETE SET NULL"))
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "next_chapter_id", referencedColumnName = "chapterId",
+            foreignKey = @ForeignKey(name = "fk_next_chapter", foreignKeyDefinition = "FOREIGN KEY (next_chapter_id) REFERENCES copy_message_manga(chapter_id) ON DELETE SET NULL"))
     private Chapter nextChapter;
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "prev_chapter_id", referencedColumnName = "chapterId", foreignKey = @ForeignKey(name = "fk_prev_chapter", foreignKeyDefinition = "FOREIGN KEY (prev_chapter_id) REFERENCES copy_message_manga(chapter_id) ON DELETE SET NULL"))
+
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "prev_chapter_id", referencedColumnName = "chapterId",
+            foreignKey = @ForeignKey(name = "fk_prev_chapter", foreignKeyDefinition = "FOREIGN KEY (prev_chapter_id) REFERENCES copy_message_manga(chapter_id) ON DELETE SET NULL"))
     private Chapter prevChapter;
-    private int orderIndex;
+
     private String type;
     private String format;
     private String name;
@@ -39,14 +45,15 @@ public class Chapter {
     private String vol;
     private String chapter;
     private String status;
+    private String pdfStatusDownload;
+    private String telegraphStatusDownload;
     private Timestamp addedAt;
     private String languageCode;
-    private List<String> urlPageList;
 
     public Chapter() {
     }
 
-    public Chapter(String catalogName, String mangaId, String chapterId, String name, String vol, String chapter, Timestamp addedAt, String format, Long mangaDataBaseId, String languageCode) {
+    public Chapter(String catalogName, String mangaId, String chapterId, String name, String vol, String chapter, Timestamp addedAt, String format, Long mangaDataBaseId, String type, String languageCode) {
         this.catalogName = catalogName;
         this.mangaId = mangaId;
         this.chapterId = chapterId;
@@ -56,6 +63,7 @@ public class Chapter {
         this.addedAt = addedAt;
         this.format = format;
         this.mangaDataBaseId = mangaDataBaseId;
+        this.type = type;
         this.languageCode = languageCode;
     }
 

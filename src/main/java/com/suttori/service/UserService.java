@@ -57,8 +57,8 @@ public class UserService {
         }
 
         User user = new User(message.getFrom().getId(), message.getChatId(), message.getFrom().getFirstName(), message.getFrom().getLastName(),
-                message.getFrom().getUserName(), null, message.getFrom().getIsPremium(), message.getFrom().getLanguageCode(),
-                new Timestamp(System.currentTimeMillis()), referral, false, "START", 0);
+                message.getFrom().getUserName(), false, message.getFrom().getIsPremium(), message.getFrom().getLanguageCode(),
+                new Timestamp(System.currentTimeMillis()), referral, false, "START", 0, "desu.me");
         userRepository.save(user);
     }
 
@@ -74,7 +74,6 @@ public class UserService {
     }
 
     public void setPositionAndMessageId(Long userId, String position) {
-        userRepository.setTemporaryMessageId(null, userId);
         userRepository.setPosition(position, userId);
     }
 

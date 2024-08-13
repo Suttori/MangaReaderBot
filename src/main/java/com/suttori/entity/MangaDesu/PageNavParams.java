@@ -2,8 +2,12 @@ package com.suttori.entity.MangaDesu;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+
+@Getter
+@Setter
 public class PageNavParams {
     private Integer count;
     private Integer page;
@@ -11,35 +15,4 @@ public class PageNavParams {
     @JsonProperty("order_by")
     private String orderBy;
 
-    public Integer getCount() {
-        return count;
-    }
-
-    public void setCount(Integer count) {
-        this.count = count;
-    }
-
-    public Integer getPage() {
-        return page;
-    }
-
-    public void setPage(Integer page) {
-        this.page = page;
-    }
-
-    public Integer getLimit() {
-        return limit;
-    }
-
-    public void setLimit(Integer limit) {
-        this.limit = limit;
-    }
-
-    public String getOrderBy() {
-        return orderBy;
-    }
-
-    public void setOrderBy(String orderBy) {
-        this.orderBy = orderBy;
-    }
 }

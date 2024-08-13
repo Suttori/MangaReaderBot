@@ -16,7 +16,7 @@ public class Manga {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String coverFileId;
-    private String backupCoverFileId;
+    private String coverUrl;
     private String mangaId;
     private String catalogName;
 
@@ -26,17 +26,16 @@ public class Manga {
     private String genres;
     private String format;
     private String description;
-    private int releaseDate;
+    private String releaseDate;
     private String rating;
-    private int numberOfChapters;
+    private String numberOfChapters;
     private String languageCode;
 
     public Manga() {
     }
 
-    public Manga(String coverFileId, String backupCoverFileId, String mangaId, String catalogName, String name, String type, String status, String genres, String description, int releaseDate, String rating, int numberOfChapters, String format, String languageCode) {
-        this.coverFileId = coverFileId;
-        this.backupCoverFileId = backupCoverFileId;
+    public Manga(String coverUrl, String mangaId, String catalogName, String name, String type, String status, String genres, String description, String releaseDate, String rating, String numberOfChapters, String format, String languageCode) {
+        this.coverUrl = coverUrl;
         this.mangaId = mangaId;
         this.catalogName = catalogName;
         this.name = name;

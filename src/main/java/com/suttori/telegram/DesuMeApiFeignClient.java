@@ -1,14 +1,13 @@
 package com.suttori.telegram;
 
-import feign.Headers;
+import com.suttori.config.FeignConfig;;
 import feign.Response;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@FeignClient(name = "desuMeApiFeignClient", url = "https://desu.win/")
-@Headers("User-Agent: Manga Reader Bot")
+@FeignClient(name = "desuMeApiFeignClient", url = "https://desu.win/", configuration = FeignConfig.class)
 public interface DesuMeApiFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/manga/api/")

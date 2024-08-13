@@ -18,7 +18,6 @@ import java.util.Arrays;
 
 @Service
 public class ButtonService {
-    private final Logger logger = LoggerFactory.getLogger(ButtonService.class);
 
     private TelegramSender telegramSender;
     private LocaleService localeService;

@@ -23,17 +23,19 @@ public interface Processor {
     default void process(List<Update> updates) {
         List<Update> updateList = new LinkedList<>();
         for (int i = 0; i < updates.size(); i++) {
-            if (updates.get(i).hasMessage() && updates.get(i).getMessage().getMediaGroupId() == null) {
-                executeMessage(updates.get(i));
-            } else if (updates.get(i).hasCallbackQuery()) {
-                executeCallBackQuery(updates.get(i).getCallbackQuery());
-            } else if (updates.get(i).hasInlineQuery()) {
-                executeInlineQuery(updates.get(i).getInlineQuery());
-            } else if (updates.get(i).getMessage() != null && updates.get(i).getMessage().getMediaGroupId() != null) {
+            Update update = updates.get(i);
+
+            if (update.hasMessage() && update.getMessage().getMediaGroupId() == null) {
+                executeMessage(update);
+            } else if (update.hasCallbackQuery()) {
+                executeCallBackQuery(update.getCallbackQuery());
+            } else if (update.hasInlineQuery()) {
+                executeInlineQuery(update.getInlineQuery());
+            } else if (update.getMessage() != null && update.getMessage().getMediaGroupId() != null) {
                 if (updateList.isEmpty()) {
-                    updateList.add(updates.get(i));
-                } else if (updates.get(i).getMessage().getMediaGroupId().equals(updateList.get(updateList.size() - 1).getMessage().getMediaGroupId())) {
-                    updateList.add(updates.get(i));
+                    updateList.add(update);
+                } else if (update.getMessage().getMediaGroupId().equals(updateList.get(updateList.size() - 1).getMessage().getMediaGroupId())) {
+                    updateList.add(update);
                     if (updates.size() == i + 1) {
                         executeMediaGroup(updateList);
                         break;
@@ -45,7 +47,7 @@ public interface Processor {
                 } else {
                     executeMediaGroup(updateList);
                     updateList = new LinkedList<>();
-                    updateList.add(updates.get(i));
+                    updateList.add(update);
                 }
             }
         }

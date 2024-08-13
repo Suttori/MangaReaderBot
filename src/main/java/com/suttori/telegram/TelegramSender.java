@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.*;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatAdministrators;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
+import org.telegram.telegrambots.meta.api.methods.invoices.CreateInvoiceLink;
+import org.telegram.telegrambots.meta.api.methods.invoices.SendInvoice;
 import org.telegram.telegrambots.meta.api.methods.pinnedmessages.PinChatMessage;
 import org.telegram.telegrambots.meta.api.methods.send.*;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.*;
@@ -48,6 +50,26 @@ public class TelegramSender {
         this.telegramApiFeignClient = telegramApiFeignClient;
     }
 
+
+    public String createInvoiceLink(CreateInvoiceLink createInvoiceLink) {
+        try {
+            return telegramClient.executeAsync(createInvoiceLink).get();
+        } catch (InterruptedException | ExecutionException | TelegramApiException e) {
+            logger.error("Failed send createInvoiceLink", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Message sendInvoice(SendInvoice sendInvoice) {
+        logger.info("send " + sendInvoice.getChatId());
+        try {
+            return telegramClient.executeAsync(sendInvoice).get();
+        } catch (InterruptedException | ExecutionException | TelegramApiException e) {
+            logger.error("Failed send " + sendInvoice.getChatId(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
     public Message send(SendMessage sendMessage) {
         logger.info("send " + sendMessage.getChatId());
         try {
@@ -63,8 +85,19 @@ public class TelegramSender {
         try {
             telegramClient.execute(editMessageText);
         } catch (TelegramApiException e) {
-            logger.error("Failed sendEditMessageText " + editMessageText.getChatId(), e);
+            logger.error("Failed send " + editMessageText.getChatId(), e);
+            throw new RuntimeException(e);
         }
+    }
+
+    public Message sendEditMessageTextAsync(EditMessageText editMessageText) {
+        logger.info("sendEditMessageTextAsync " + editMessageText.getChatId());
+        try {
+            return (Message) telegramClient.executeAsync(editMessageText).get();
+        } catch (InterruptedException | ExecutionException | TelegramApiException e) {
+            logger.error("Failed sendEditMessageTextAsync " + editMessageText.getChatId(), e);
+        }
+        return null;
     }
 
     public void sendAnswerCallbackQuery(AnswerCallbackQuery answerCallbackQuery) {

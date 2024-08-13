@@ -4,10 +4,14 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.sql.Timestamp;
 
 @Entity
+@Getter
+@Setter
 public class LastActivity {
 
     @Id
@@ -17,29 +21,6 @@ public class LastActivity {
     private int activeUsers;
     private Timestamp date;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public int getActiveUsers() {
-        return activeUsers;
-    }
-
-    public void setActiveUsers(int activeUsers) {
-        this.activeUsers = activeUsers;
-    }
-
-    public Timestamp getDate() {
-        return date;
-    }
-
-    public void setDate(Timestamp date) {
-        this.date = date;
-    }
 
     @Override
     public String toString() {

@@ -2,13 +2,13 @@ package com.suttori.handler;
 
 import com.suttori.config.ServiceConfig;
 import com.suttori.entity.User;
+import com.suttori.exception.CatalogNotFoundException;
 import com.suttori.service.*;
 import com.suttori.telegram.TelegramSender;
 import com.suttori.util.Util;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
-import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 
@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 
 @Component
+@Slf4j
 public class MessageHandler implements Handler<Update> {
 
     private ButtonService buttonService;
@@ -30,12 +31,14 @@ public class MessageHandler implements Handler<Update> {
     private ProfileService profileService;
     private Util util;
     private ServiceConfig serviceConfig;
+    private SortFilterDesuMeService sortFilterDesuMeService;
+    private SortFilterMangaDexService sortFilterMangaDexService;
 
     @Autowired
     public MessageHandler(ButtonService buttonService, UserService userService, SettingService settingService,
                           AdminService adminService, SenderService senderService, ReferralService referralService,
                           LocaleService localeService, MangaService mangaService, TelegramSender telegramSender, Util util,
-                          ProfileService profileService, ServiceConfig serviceConfig) {
+                          ProfileService profileService, ServiceConfig serviceConfig, SortFilterDesuMeService sortFilterDesuMeService, SortFilterMangaDexService sortFilterMangaDexService) {
         this.buttonService = buttonService;
         this.userService = userService;
         this.settingService = settingService;
@@ -48,6 +51,8 @@ public class MessageHandler implements Handler<Update> {
         this.util = util;
         this.profileService = profileService;
         this.serviceConfig = serviceConfig;
+        this.sortFilterDesuMeService = sortFilterDesuMeService;
+        this.sortFilterMangaDexService = sortFilterMangaDexService;
     }
 
     @Override
@@ -78,70 +83,133 @@ public class MessageHandler implements Handler<Update> {
         }
 
         if (message.hasText()) {
-            switch (message.getText()) {
-                case "Поиск":
-                    if (referralService.checkAccess(message)) {
-                        mangaService.clickSearch(message);
-                    }
-                    return;
-                case "Случайная манга":
-                    if (referralService.checkAccess(message)) {
-                        serviceConfig.mangaServices().get(user.getCurrentMangaCatalog()).getRandomManga(message.getFrom().getId());
-                    }
-                    return;
-                case "Профиль":
-                    if (referralService.checkAccess(message)) {
-                        profileService.clickProfile(message);
-                    }
-                    return;
-                case "Настройки ⚙":
-                    if (referralService.checkAccess(message)) {
-                        settingService.clickSettings(message.getFrom().getId(), null);
-                    }
-                    return;
-                case "Главное меню":
-                    if (referralService.checkAccess(message)) {
-                        userService.setPositionAndMessageId(user.getUserId(), "DEFAULT_POSITION");
-                        buttonService.generateMainButtonsWithGreetings(message.getFrom().getId(), message.getText());
-                    }
-                    return;
-            }
-
-            if (message.getText().contains("\nchapterId\n")) {
-                try {
-                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
-                    serviceConfig.mangaServices().get(util.getSourceName(message.getText())).getChapterFromMessageHandler(message);
-                } catch (NullPointerException e) {
-                    util.sendErrorMessage("Произошла ошибка при поиске главы, введен неправильный запрос или что-то другое. Перезапусти бот и, если ошибка повторится, то напиши в поддержку.", user.getUserId());
+            try {
+                switch (message.getText()) {
+                    case "Поиск":
+                        if (referralService.checkAccess(message)) {
+                            mangaService.clickSearch(message);
+                        }
+                        return;
+                    case "Случайная манга":
+                        if (referralService.checkAccess(message)) {
+                            serviceConfig.mangaServices().get(user.getCurrentMangaCatalog()).getRandomManga(message.getFrom().getId());
+                        }
+                        return;
+                    case "Профиль":
+                        if (referralService.checkAccess(message)) {
+                            profileService.clickProfile(message);
+                        }
+                        return;
+                    case "Настройки ⚙":
+                        if (referralService.checkAccess(message)) {
+                            settingService.clickSettings(message.getFrom().getId(), null);
+                        }
+                        return;
+                    case "Главное меню":
+                        if (referralService.checkAccess(message)) {
+                            userService.setPositionAndMessageId(user.getUserId(), "DEFAULT_POSITION");
+                            buttonService.generateMainButtonsWithGreetings(message.getFrom().getId(), message.getText());
+                        }
+                        return;
                 }
-                return;
-            }
 
-            if (message.getText().contains("\nmangaId\n")) {
-                try {
+                if (message.getText().contains("\nsetSortParam\n")) {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    serviceConfig.sortFilterServices().get(util.getSourceName(message.getText())).setSortParams(message);
+                    serviceConfig.sortFilterServices().get(util.getSourceName(message.getText())).clickSetSortFilterParams(message.getFrom().getId(), Integer.valueOf(user.getTemporaryMessageId()));
+                    return;
+                }
+
+                if (message.getText().contains("\nsetStatusParam\n")) {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    serviceConfig.sortFilterServices().get(util.getSourceName(message.getText())).setStatusParams(message);
+                    serviceConfig.sortFilterServices().get(util.getSourceName(message.getText())).clickSetSortFilterParams(message.getFrom().getId(), Integer.valueOf(user.getTemporaryMessageId()));
+                    return;
+                }
+
+                if (message.getText().contains("\nsetGenreParam\n")) {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    serviceConfig.sortFilterServices().get(util.getSourceName(message.getText())).setGenreParams(message);
+                    serviceConfig.sortFilterServices().get(util.getSourceName(message.getText())).clickSetSortFilterParams(message.getFrom().getId(), Integer.valueOf(user.getTemporaryMessageId()));
+                    return;
+                }
+
+                if (message.getText().contains("\nsetTypeParam\n")) {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    sortFilterDesuMeService.setTypeParams(message);
+                    serviceConfig.sortFilterServices().get(util.getSourceName(message.getText())).clickSetSortFilterParams(message.getFrom().getId(), Integer.valueOf(user.getTemporaryMessageId()));
+                    return;
+                }
+
+                if (message.getText().contains("\nsetContentRatingParam\n")) {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    sortFilterMangaDexService.setContentRatingParams(message);
+                    serviceConfig.sortFilterServices().get(util.getSourceName(message.getText())).clickSetSortFilterParams(message.getFrom().getId(), Integer.valueOf(user.getTemporaryMessageId()));
+                    return;
+                }
+
+                if (message.getText().contains("\nsetMagazineDemographicParamsParam\n")) {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    sortFilterMangaDexService.setMagazineDemographicParams(message);
+                    serviceConfig.sortFilterServices().get(util.getSourceName(message.getText())).clickSetSortFilterParams(message.getFrom().getId(), Integer.valueOf(user.getTemporaryMessageId()));
+                    return;
+                }
+
+                if (message.getText().contains("\nsetFormatParam\n")) {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    sortFilterMangaDexService.setFormatParams(message);
+                    serviceConfig.sortFilterServices().get(util.getSourceName(message.getText())).clickSetSortFilterParams(message.getFrom().getId(), Integer.valueOf(user.getTemporaryMessageId()));
+                    return;
+                }
+
+                if (message.getText().contains("\nsetThemeParam\n")) {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    sortFilterMangaDexService.setThemeParams(message);
+                    serviceConfig.sortFilterServices().get(util.getSourceName(message.getText())).clickSetSortFilterParams(message.getFrom().getId(), Integer.valueOf(user.getTemporaryMessageId()));
+                    return;
+                }
+
+                if (message.getText().contains("\nchapterId\n")) {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    mangaService.getChapterFromMessageHandler(message);
+                    return;
+                }
+
+                if (message.getText().contains("\nmangaId\n")) {
                     telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
                     serviceConfig.mangaServices().get(util.getSourceName(message.getText())).sendMangaById(message.getFrom().getId(), util.parseValue(message.getText())[2]);
-                } catch (NullPointerException e) {
-                    util.sendErrorMessage("Произошла ошибка при поиске манги, введен неправильный запрос или что-то другое. Перезапусти бот и, если ошибка повторится, то напиши в поддержку.", user.getUserId());
+                    return;
                 }
-                return;
-            }
-            if (message.getText().contains("chooseLanguageCodeMangaDex\n")) {
-                mangaService.setLanguageCodeMangaDexAndCatalog(message);
-                return;
-            }
 
+                if (message.getText().contains("\nmangaDatabaseId\n")) {
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    serviceConfig.mangaServices().get(util.getSourceName(message.getText())).sendMangaByDatabaseId(message.getFrom().getId(), util.parseValue(message.getText())[2]);
+                    return;
+                }
 
-            if (message.getText().equals("sortDESC")) {
-                userService.setSortParam("sortDESC", user.getUserId());
-                telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
-                return;
-            }
+                if (message.getText().contains("chooseLanguageCodeMangaDex\n")) {
+                    mangaService.setLanguageCodeMangaDexAndCatalog(message);
+                    return;
+                }
 
-            if (message.getText().equals("sortASC")) {
-                userService.setSortParam("sortASC", user.getUserId());
-                telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
-                return;
+                if (message.getText().equals("sortDESC")) {
+                    userService.setSortParam("sortDESC", user.getUserId());
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    return;
+                }
+
+                if (message.getText().equals("sortASC")) {
+                    userService.setSortParam("sortASC", user.getUserId());
+                    telegramSender.deleteMessageById(String.valueOf(message.getFrom().getId()), message.getMessageId());
+                    return;
+                }
+
+            } catch (CatalogNotFoundException e) {
+                log.error("Ошибка при получении каталога", e);
+                util.sendErrorMessage("Произошла ошибка при получении каталога, введен неправильный запрос или что-то другое. Попробуй еще раз и, если ошибка повторится, то обратись в поддержку", user.getUserId());
+            } catch (Exception e) {
+                log.error("Неизвестная ошибка", e);
+                util.sendErrorMessage("Произошла ошибка при поиске манги, введен неправильный запрос или что-то другое. Перезапусти бот и, если ошибка повторится, то напиши в поддержку.", user.getUserId());
             }
         }
 
@@ -202,6 +270,10 @@ public class MessageHandler implements Handler<Update> {
                     adminService.createAdminPanel(message);
                     return;
                 }
+//                else if (message.getText().equals("Поехали нахой")) {
+//                    desuMeService.setChapterId();
+//                    return;
+//                }
             }
 
 

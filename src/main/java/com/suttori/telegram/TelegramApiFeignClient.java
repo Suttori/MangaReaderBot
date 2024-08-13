@@ -11,21 +11,8 @@ public interface TelegramApiFeignClient {
     @RequestMapping(method = RequestMethod.GET, value = "/bot{botToken}/sendChatAction?chat_id={chatId}&action={action}")
     Response sendChatAction(@PathVariable("botToken") String botToken, @RequestParam("chatId") Long chatId, @RequestParam("action") String action);
 
-    @RequestMapping(method = RequestMethod.GET, value = "/bot{botToken}/getChatMember?chat_id={chatId}&user_id={userId}")
-    Response isMember(@PathVariable("botToken") String botToken, @RequestParam("chatId") Long chatId, @RequestParam("userId") Long userId);
-
-    @RequestMapping(method = RequestMethod.POST, value = "/bot{botToken}/setStickerSetTitle?name={name}&title={title}")
-    Response setStickerSetTitle(@PathVariable("botToken") String botToken, @RequestParam("name") String name, @RequestParam("title") String title);
-
-    @RequestMapping(method = RequestMethod.POST, value = "/bot{botToken}/deleteStickerSet?name={name}")
-    Response deleteStickerSet(@PathVariable("botToken") String botToken, @RequestParam("name") String name);
-
     @RequestMapping(method = RequestMethod.GET, value = "/bot{botToken}/deleteMessage?chat_id={chatId}&message_id={messageId}")
     Response delete(@PathVariable("botToken") String botToken, @PathVariable("chatId") Long chatId, @PathVariable("messageId") Integer messageId);
-
-    @RequestMapping(method = RequestMethod.POST, value = "/bot{botToken}/setStickerPositionInSet?sticker={sticker}&position={position}")
-    Response setStickerPositionInSet(@PathVariable("botToken") String botToken, @RequestParam("sticker") String sticker, @RequestParam("position") Integer position);
-
 
 
     @RequestMapping(method = RequestMethod.GET, value = "/bot{botToken}/sendMessage?chat_id={chatId}&text={text}&entities={entities}&disable_web_page_preview={disable_web_page_preview}&disable_notification={disable_notification}&inline_keyboard={inline_keyboard}")

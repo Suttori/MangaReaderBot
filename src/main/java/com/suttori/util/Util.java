@@ -5,9 +5,11 @@ import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.suttori.config.ServiceConfig;
 import com.suttori.entity.MangaDesu.MangaGenre;
+import com.suttori.exception.CatalogNotFoundException;
 import com.suttori.service.LocaleService;
 import com.suttori.telegram.TelegramSender;
 import feign.Response;
+import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,16 +29,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Service
+@Slf4j
 public class Util {
 
     private TelegramSender telegramSender;
-    private LocaleService localeService;
 
 
     @Autowired
-    public Util(TelegramSender telegramSender, LocaleService localeService) {
+    public Util(TelegramSender telegramSender) {
         this.telegramSender = telegramSender;
-        this.localeService = localeService;
     }
 
     public String getPhotoFieldId(Message message) {
@@ -46,30 +47,21 @@ public class Util {
                 .orElseThrow().getFileId();
     }
 
-
     public String[] parseValue(String string) {
         return string.split("\n");
     }
 
-    public String getSourceName(String string) {
-        String sourceName = string.split("\n")[0];
+    public String getSourceName(String string) throws CatalogNotFoundException {
+        String[] parts = string.split("\n");
+        if (parts.length == 0) {
+            throw new CatalogNotFoundException("Пустая строка без разделителя.");
+        }
+        String sourceName = parts[0];
         if (sourceName.equals("desu.me") || sourceName.equals("mangadex.org")) {
             return sourceName;
         } else {
-            return null;
+            throw new CatalogNotFoundException("Каталог " + sourceName + " не найден");
         }
-    }
-
-    public Integer sendWaitGIFAndAction(Long userId) {
-        Integer messageId = telegramSender.sendDocument(SendDocument.builder()
-                .chatId(userId)
-                .caption(localeService.getBundle("util.groupMonkeyWork"))
-                .document(new InputFile("CgACAgQAAxkBAAIIB2Tog91yVaHlULK6vjynEfSj7kNzAAIgAgACEi-NUkbaXykgwa-yMAQ")).build()).getMessageId();
-
-        telegramSender.sendChatAction(userId, "choose_sticker");
-        return messageId;
-        //CgACAgQAAxkBAAIIB2Tog91yVaHlULK6vjynEfSj7kNzAAIgAgACEi-NUkbaXykgwa-yMAQ
-        //CgACAgIAAxkBAAIHuWToe1MO21Emx7I-u9Twvx6EodCpAAK8DQACOMV5SS_-4lBex3urMAQ
     }
 
     public void sendErrorMessage(String error, Long userId) {
@@ -86,27 +78,6 @@ public class Util {
                 .build());
     }
 
-    public void sendErrorMessage(String error, Long userId, InlineKeyboardMarkup inlineKeyboardMarkup) {
-        telegramSender.send(SendMessage.builder()
-                .chatId(userId)
-                .text(error)
-                .replyMarkup(inlineKeyboardMarkup)
-                .build());
-    }
-
-    public int[] getTargetSides(int originalWidth, int originalHeight) {
-        int targetSideSize = 512;
-        int newWidth, newHeight;
-        if (originalWidth > originalHeight) {
-            newWidth = targetSideSize;
-            newHeight = (int) ((double) originalHeight / originalWidth * targetSideSize);
-        } else {
-            newHeight = targetSideSize;
-            newWidth = (int) ((double) originalWidth / originalHeight * targetSideSize);
-        }
-        return new int[]{newWidth, newHeight};
-    }
-
     public File createStorageFolder(String nameFolder) {
         java.io.File folder = new java.io.File(System.getProperty("user.dir"), nameFolder);
         if (!folder.exists()) {
@@ -120,6 +91,24 @@ public class Util {
         try {
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestProperty("Referer", "https://desu.win/");
+            try (InputStream in = connection.getInputStream();
+                 OutputStream out = new FileOutputStream(file)) {
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return file;
+    }
+
+    public java.io.File downloadFileWithoutReferrer(java.io.File folder, URL url, String filePath) {
+        java.io.File file = new java.io.File(folder, filePath);
+        try {
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             try (InputStream in = connection.getInputStream();
                  OutputStream out = new FileOutputStream(file)) {
                 byte[] buffer = new byte[8192];
@@ -184,24 +173,6 @@ public class Util {
         } catch (IOException | JSONException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public String getGenres(List<MangaGenre> mangaGenreList) {
-        StringBuilder stringBuilder = new StringBuilder();
-        for (MangaGenre mangaGenre : mangaGenreList) {
-            stringBuilder.append(mangaGenre.getRussian()).append(", ");
-        }
-        return stringBuilder.toString();
-    }
-
-    public String getStatus(String status) {
-        return switch (status) {
-            case "ongoing" -> "Выходит";
-            case "released" -> "Издано";
-            case "continued" -> "Переводится";
-            case "completed" -> "Завершено";
-            default -> "none";
-        };
     }
 
 

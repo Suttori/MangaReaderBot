@@ -1,6 +1,8 @@
 package com.suttori.dao;
 
+import com.suttori.dto.ChapterDto;
 import com.suttori.entity.Chapter;
+
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -9,49 +11,50 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Repository
-public interface MangaChapterRepository extends JpaRepository<Chapter, Long> {
+public interface MangaChapterRepository extends JpaRepository<Chapter, Long>, CustomMangaChapterRepository {
 
+    @Query("SELECT new com.suttori.dto.ChapterDto(" +
+            "c.id, c.messageId, c.backupMessageId, c.catalogName, c.mangaId, c.mangaDataBaseId, " +
+            "c.chapterId, c.nextChapter.chapterId, c.prevChapter.chapterId, c.type, c.format, c.name, c.telegraphUrl, " +
+            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload) " +
+            "FROM Chapter c WHERE c.mangaId = :mangaId AND c.catalogName = :catalogName")
+    List<ChapterDto> findAllByMangaIdAndCatalogName(@Param("mangaId") String mangaId, @Param("catalogName") String catalogName);
 
-    @Query(value = """
-        WITH RECURSIVE chapter_chain AS (
-            SELECT *
-            FROM copy_message_manga
-            WHERE manga_id = :mangaId AND catalog_name = :catalogName AND language_code = :languageCode AND prev_chapter_id IS NULL
-            UNION ALL
-            SELECT c.*
-            FROM copy_message_manga c
-            INNER JOIN chapter_chain cc ON c.prev_chapter_id = cc.chapter_id
-        )
-        SELECT * FROM chapter_chain;
-        """, nativeQuery = true)
-    List<Chapter> getChaptersInOrder(@Param("mangaId") String mangaId, @Param("catalogName") String catalogName, @Param("languageCode") String languageCode);
+    @Query("SELECT new com.suttori.dto.ChapterDto(" +
+            "c.id, c.messageId, c.backupMessageId, c.catalogName, c.mangaId, c.mangaDataBaseId, " +
+            "c.chapterId, c.nextChapter.chapterId, c.prevChapter.chapterId, c.type, c.format, c.name, c.telegraphUrl, " +
+            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload) " +
+            "FROM Chapter c WHERE c.mangaId = :mangaId AND c.catalogName = :catalogName AND c.languageCode = :languageCode")
+    List<ChapterDto> findAllByMangaIdAndCatalogNameAndLanguageCode(@Param("mangaId") String mangaId, @Param("catalogName") String catalogName, @Param("languageCode") String languageCode);
 
+    @Query("SELECT new com.suttori.dto.ChapterDto(" +
+            "c.id, c.messageId, c.backupMessageId, c.catalogName, c.mangaId, c.mangaDataBaseId, " +
+            "c.chapterId, c.nextChapter.chapterId, c.prevChapter.chapterId, c.type, c.format, c.name, c.telegraphUrl, " +
+            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload) " +
+            "FROM Chapter c WHERE c.id = :id")
+    ChapterDto findChapterDtoById(@Param("id") Long id);
 
-    Chapter findFirstByMangaIdAndVolAndChapter(String mangaId, String vol, String chapter);
+    @Query("SELECT new com.suttori.dto.ChapterDto(" +
+            "c.id, c.messageId, c.backupMessageId, c.catalogName, c.mangaId, c.mangaDataBaseId, " +
+            "c.chapterId, c.nextChapter.chapterId, c.prevChapter.chapterId, c.type, c.format, c.name, c.telegraphUrl, " +
+            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload) " +
+            "FROM Chapter c WHERE c.chapterId = :chapterId")
+    ChapterDto findChapterDtoByChapterId(@Param("chapterId") String chapterId);
 
-    Chapter findByChapterId(String chapterId);
-    ArrayList<Chapter> findAllByBackupMessageIdIsNull();
-
-    ArrayList<Chapter> findAllByMangaIdAndCatalogName(String mangaId, String catalogName);
-
-    ArrayList<Chapter> findAllByMangaIdAndCatalogNameAndLanguageCode(String mangaId, String catalogName, String languageCode);
-
-    boolean existsByChapterIdAndCatalogName(String chapterId, String catalogName);
-
-    @Transactional
-    void deleteByMessageId(Integer messageId);
-
-    @Transactional
-    void deleteByChapterId(String chapterId);
+    Long countAllByPdfStatusDownloadOrTelegraphStatusDownload(String pdfStatus, String telegraphStatus);
 
     @Transactional
     @Modifying
     @Query(value = "UPDATE copy_message_manga SET next_chapter_id = ? WHERE id = ?", nativeQuery = true)
     void setNextChapter(@Param("next_chapter_id") String next_chapter_id, @Param("id") Long id);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE copy_message_manga SET manga_data_base_id = :mangaDataBaseId, type = :type WHERE id = :id", nativeQuery = true)
+    void setMangaDatabaseIdAndType(@Param("mangaDataBaseId") Long mangaDataBaseId, @Param("type") String type, @Param("id") Long id);
 
     @Transactional
     @Modifying
@@ -75,8 +78,28 @@ public interface MangaChapterRepository extends JpaRepository<Chapter, Long> {
 
     @Transactional
     @Modifying
+    @Query(value = "UPDATE copy_message_manga SET telegraph_message_id = ? WHERE id = ?", nativeQuery = true)
+    void setTelegraphMessageId(@Param("telegraph_message_id") Integer telegraph_message_id, @Param("id") Long id);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE copy_message_manga SET pdf_message_id = ? WHERE id = ?", nativeQuery = true)
+    void setPdfMessageId(@Param("pdf_message_id") Integer pdf_message_id, @Param("id") Long id);
+
+    @Transactional
+    @Modifying
     @Query(value = "UPDATE copy_message_manga SET status = ? WHERE id = ?", nativeQuery = true)
     void setStatus(@Param("status") String status, @Param("id") Long id);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE copy_message_manga SET telegraph_status_download = ? WHERE id = ?", nativeQuery = true)
+    void setTelegraphStatusDownload(@Param("telegraph_status_download") String telegraph_status_download, @Param("id") Long id);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE copy_message_manga SET pdf_status_download = ? WHERE id = ?", nativeQuery = true)
+    void setPdfStatusDownload(@Param("pdf_status_download") String pdf_status_download, @Param("id") Long id);
 
     @Transactional
     @Modifying

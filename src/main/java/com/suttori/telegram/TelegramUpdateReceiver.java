@@ -25,7 +25,7 @@ public class TelegramUpdateReceiver implements LongPollingUpdateConsumer {
 
     @Override
     public void consume(List<Update> updates) {
-        // processor.process(updates);
+         //processor.process(updates);
         Long userId = getUserId(updates.get(0));
         if (userId == null) {
             return;

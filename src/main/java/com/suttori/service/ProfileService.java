@@ -1,13 +1,11 @@
 package com.suttori.service;
 
 import com.suttori.dao.*;
+import com.suttori.entity.*;
 import com.suttori.entity.Enums.UserStatus;
-import com.suttori.entity.FriendEntity;
-import com.suttori.entity.HistoryEntity;
-import com.suttori.entity.MangaDesu.MangaDataDesu;
-import com.suttori.entity.MangaStatusParameter;
 import com.suttori.entity.User;
 import com.suttori.telegram.TelegramSender;
+import com.suttori.util.MangaUtil;
 import com.suttori.util.Util;
 import com.vdurmont.emoji.EmojiParser;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,29 +37,33 @@ public class ProfileService {
 
     private TelegramSender telegramSender;
     private Util util;
-    private MangaService mangaService;
     private MangaStatusParameterRepository mangaStatusParameterRepository;
     private UserRepository userRepository;
     private HistoryEntityRepository historyEntityRepository;
     private FriendEntityRepository friendEntityRepository;
     private StatisticEntityRepository statisticEntityRepository;
+    private MangaRepository mangaRepository;
+    private MangaUtil mangaUtil;
 
     @Autowired
-    public ProfileService(TelegramSender telegramSender, Util util, MangaService mangaService,
+    public ProfileService(TelegramSender telegramSender, Util util,
                           MangaStatusParameterRepository mangaStatusParameterRepository, UserRepository userRepository,
                           HistoryEntityRepository historyEntityRepository, FriendEntityRepository friendEntityRepository,
-                          StatisticEntityRepository statisticEntityRepository) {
+                          StatisticEntityRepository statisticEntityRepository, MangaRepository mangaRepository, MangaUtil mangaUtil) {
         this.telegramSender = telegramSender;
         this.util = util;
-        this.mangaService = mangaService;
         this.mangaStatusParameterRepository = mangaStatusParameterRepository;
         this.userRepository = userRepository;
         this.historyEntityRepository = historyEntityRepository;
         this.friendEntityRepository = friendEntityRepository;
         this.statisticEntityRepository = statisticEntityRepository;
+        this.mangaRepository = mangaRepository;
+        this.mangaUtil = mangaUtil;
     }
 
     public void clickProfile(Message message) {
+        mangaUtil.checkDuplicateMangaStatusParameter(message.getFrom().getId());
+
         telegramSender.sendPhoto(SendPhoto.builder()
                 .photo(new InputFile(getPhotoFieldId(message.getFrom().getId(), "AgACAgIAAxkBAAIHS2XPgbBhPyaF8R5oxtmOPPXHPLvTAAKY4jEbIRZ4Sv0mR_QE3jErAQADAgADcwADNAQ")))
                 .caption(getTextForUserProfile(message.getFrom().getId()))
@@ -124,19 +126,19 @@ public class ProfileService {
             return UserStatus.NEWBIE.getStatusName();
         } else if (downloadsSize < 500) {
             return UserStatus.STUDENT.getStatusName();
-        } else if (downloadsSize < 1500) {
+        } else if (downloadsSize < 1000) {
             return UserStatus.ADVANCED.getStatusName();
-        } else if (downloadsSize < 4500) {
+        } else if (downloadsSize < 1500) {
             return UserStatus.EXPERT.getStatusName();
-        } else if (downloadsSize < 10000) {
+        } else if (downloadsSize < 3000) {
             return UserStatus.GURU.getStatusName();
-        } else if (downloadsSize < 20000) {
+        } else if (downloadsSize < 4000) {
             return UserStatus.CHAMPION.getStatusName();
-        } else if (downloadsSize < 30000) {
+        } else if (downloadsSize < 5000) {
             return UserStatus.IDEAL.getStatusName();
-        } else if (downloadsSize < 50000) {
+        } else if (downloadsSize < 7000) {
             return UserStatus.LEGEND.getStatusName();
-        } else if (downloadsSize < 100000) {
+        } else if (downloadsSize < 10000) {
             return UserStatus.DEITY.getStatusName();
         } else {
             return null;
@@ -155,7 +157,7 @@ public class ProfileService {
         }
 
         telegramSender.sendEditMessageCaption(EditMessageCaption.builder()
-                .caption("Мои закладки:")
+                .caption(getTextForUserProfile(callbackQuery.getFrom().getId()))
                 .messageId(messageId)
                 .chatId(userId)
                 .parseMode("HTML")
@@ -178,25 +180,44 @@ public class ProfileService {
         Pageable pageable = PageRequest.of(offset / 30 - 1, 30, sort);
 
         List<HistoryEntity> historyEntities = historyEntityRepository.findAllByUserId(inlineQuery.getFrom().getId(), pageable);
-        if (historyEntities.isEmpty()) {
+        if (offset == 30 && historyEntities.isEmpty()) {
+            telegramSender.sendAnswerInlineQuery(AnswerInlineQuery.builder()
+                    .results(Collections.singletonList(InlineQueryResultArticle.builder()
+                            .id(String.valueOf(inlineQuery.getFrom().getId()))
+                            .title("Ой...")
+                            .description("Твоя история прочтения пуста, нажми \"Поиск\" чтобы начать искать мангу")
+                            .thumbnailUrl("https://gorillastorage.s3.eu-north-1.amazonaws.com/MangaReaderBot/hand-drawn-vintage-comic-illustration_23-2149624608.jpg")
+                            .inputMessageContent(new InputTextMessageContent("Поиск")).build()))
+                    .nextOffset(String.valueOf(offset + 30))
+                    .inlineQueryId(inlineQuery.getId()).build());
             return;
         }
+
         List<InlineQueryResult> inlineQueryResultList = new ArrayList<>();
         int i = 0;
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
         for (HistoryEntity historyEntity : historyEntities) {
-            MangaDataDesu mangaDataDesu = mangaService.getMangaData(historyEntity.getMangaId());
-            StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.append("Рейтинг: ").append(mangaDataDesu.getScore());
-            stringBuilder.append(" | Год: ").append(new SimpleDateFormat("yyyy").format(new Date(mangaDataDesu.getAired_on() * 1000))).append(" | Тип: ").append(mangaDataDesu.getKind()).append("\n");
-            stringBuilder.append("Статус: ").append(util.getStatus(mangaDataDesu.getStatus())).append("\n");
-            stringBuilder.append("Жанр: ").append(util.getGenres(mangaDataDesu.getGenres()));
-            inlineQueryResultList.add(InlineQueryResultArticle.builder()
-                    .id(inlineQuery.getFrom().getId() + "" + i++)
-                    .title(mangaDataDesu.getRussian())
-                    .description(stringBuilder.toString())
-                    .thumbnailUrl(mangaDataDesu.getImage().getOriginal())
-                    .inputMessageContent(new InputTextMessageContent("mangaId\n" + mangaDataDesu.getId())).build());
+            if (historyEntity.getMangaDatabaseId() != null) {
+                Manga manga = mangaRepository.findById(historyEntity.getMangaDatabaseId()).orElseThrow();
+                inlineQueryResultList.add(InlineQueryResultArticle.builder()
+                        .id(inlineQuery.getFrom().getId() + "" + i++)
+                        .title(manga.getName())
+                        .description(manga.getReleaseDate() +
+                                " | Формат: " + manga.getType() + "\n" +
+                                "Статус: " + manga.getStatus() + "\n" +
+                                "Жанр: " + manga.getGenres())
+                        .thumbnailUrl(manga.getCoverUrl() != null ? manga.getCoverUrl() : "https://gorillastorage.s3.eu-north-1.amazonaws.com/MangaReaderBot/hand-drawn-vintage-comic-illustration_23-2149624608.jpg")
+                        .inputMessageContent(new InputTextMessageContent(manga.getCatalogName() + "\nmangaDatabaseId\n" + manga.getId())).build());
+            } else {
+                inlineQueryResultList.add(InlineQueryResultArticle.builder()
+                        .id(inlineQuery.getFrom().getId() + "" + i++)
+                        .title(historyEntity.getName() != null ? historyEntity.getName() : historyEntity.getRussian())
+                        .description("Просмотрено: " + dateFormat.format(historyEntity.getUpdateAt()))
+                        .thumbnailUrl("https://gorillastorage.s3.eu-north-1.amazonaws.com/MangaReaderBot/hand-drawn-vintage-comic-illustration_23-2149624608.jpg")
+                        .inputMessageContent(new InputTextMessageContent(historyEntity.getCatalogName() + "\nmangaId\n" + historyEntity.getMangaId())).build());
+            }
         }
+
         telegramSender.sendAnswerInlineQuery(AnswerInlineQuery.builder()
                 .results(inlineQueryResultList)
                 .isPersonal(true)
@@ -206,7 +227,6 @@ public class ProfileService {
     }
 
     public void getMangaByStatus(InlineQuery inlineQuery) {
-
         String query = inlineQuery.getQuery();
 
         int offset = 30;
@@ -218,26 +238,44 @@ public class ProfileService {
         Pageable pageable = PageRequest.of(offset / 30 - 1, 30, sort);
 
         List<MangaStatusParameter> statusParameterList = mangaStatusParameterRepository.findAllByUserIdAndStatus(inlineQuery.getFrom().getId(), query, pageable);
-        if (statusParameterList.isEmpty()) {
+
+        if (offset == 30 && statusParameterList.isEmpty()) {
+            telegramSender.sendAnswerInlineQuery(AnswerInlineQuery.builder()
+                    .results(Collections.singletonList(InlineQueryResultArticle.builder()
+                            .id(String.valueOf(inlineQuery.getFrom().getId()))
+                            .description("В этой категории у тебя нет добавленной манги")
+                            .title("Ой...")
+                            .thumbnailUrl("https://gorillastorage.s3.eu-north-1.amazonaws.com/MangaReaderBot/hand-drawn-vintage-comic-illustration_23-2149624608.jpg")
+                            .inputMessageContent(new InputTextMessageContent("Поиск")).build()))
+                    .nextOffset(String.valueOf(offset + 30))
+                    .inlineQueryId(inlineQuery.getId()).build());
             return;
         }
         List<InlineQueryResult> inlineQueryResultList = new ArrayList<>();
         int i = 0;
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
         for (MangaStatusParameter mangaStatusParameter : statusParameterList) {
-            MangaDataDesu mangaDataDesu = mangaService.getMangaData(mangaStatusParameter.getMangaId());
-
-            StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.append("Рейтинг: ").append(mangaDataDesu.getScore());
-            stringBuilder.append(" | Год: ").append(new SimpleDateFormat("yyyy").format(new Date(mangaDataDesu.getAired_on() * 1000))).append(" | Тип: ").append(mangaDataDesu.getKind()).append("\n");
-            stringBuilder.append("Статус: ").append(util.getStatus(mangaDataDesu.getStatus())).append("\n");
-            stringBuilder.append("Жанр: ").append(mangaDataDesu.getGenres());
-            inlineQueryResultList.add(InlineQueryResultArticle.builder()
-                    .id(inlineQuery.getFrom().getId() + "" + i++)
-                    .title(mangaDataDesu.getRussian())
-                    .description(stringBuilder.toString())
-                    .thumbnailUrl(mangaDataDesu.getImage().getOriginal())
-                    .inputMessageContent(new InputTextMessageContent("mangaId\n" + mangaDataDesu.getId())).build());
+            if (mangaStatusParameter.getMangaDatabaseId() != null) {
+                Manga manga = mangaRepository.findById(mangaStatusParameter.getMangaDatabaseId()).orElseThrow();
+                inlineQueryResultList.add(InlineQueryResultArticle.builder()
+                        .id(inlineQuery.getFrom().getId() + "" + i++)
+                        .title(manga.getName())
+                        .description(manga.getReleaseDate() +
+                                " | Формат: " + manga.getType() + "\n" +
+                                "Статус: " + manga.getStatus() + "\n" +
+                                "Жанр: " + manga.getGenres())
+                        .thumbnailUrl(manga.getCoverUrl() != null ? manga.getCoverUrl() : "https://gorillastorage.s3.eu-north-1.amazonaws.com/MangaReaderBot/hand-drawn-vintage-comic-illustration_23-2149624608.jpg")
+                        .inputMessageContent(new InputTextMessageContent(manga.getCatalogName() + "\nmangaDatabaseId\n" + manga.getId())).build());
+            } else {
+                inlineQueryResultList.add(InlineQueryResultArticle.builder()
+                        .id(inlineQuery.getFrom().getId() + "" + i++)
+                        .title(mangaStatusParameter.getName() != null ? mangaStatusParameter.getName() : mangaStatusParameter.getRussian())
+                        .description("Добавлено: " + dateFormat.format(mangaStatusParameter.getAddedAt()))
+                        .thumbnailUrl("https://gorillastorage.s3.eu-north-1.amazonaws.com/MangaReaderBot/hand-drawn-vintage-comic-illustration_23-2149624608.jpg")
+                        .inputMessageContent(new InputTextMessageContent(mangaStatusParameter.getCatalogName() + "\nmangaId\n" + mangaStatusParameter.getMangaId())).build());
+            }
         }
+
         telegramSender.sendAnswerInlineQuery(AnswerInlineQuery.builder()
                 .results(inlineQueryResultList)
                 .isPersonal(true)
@@ -245,32 +283,6 @@ public class ProfileService {
                 .nextOffset(String.valueOf(offset + 30))
                 .inlineQueryId(inlineQuery.getId()).build());
     }
-
-//    public void sendMangaViaProfile(CallbackQuery callbackQuery) {
-//        Long mangaId = Long.valueOf(util.parseValue(callbackQuery.getData())[1]);
-//        Long userId = callbackQuery.getFrom().getId();
-//
-//        InlineKeyboardMarkup inlineKeyboardMarkup = mangaService.getMangaButtonsViaProfile(callbackQuery.getData(), mangaId, userId);
-//
-//        if (callbackQuery.getData().contains("sendMangaViaFavorites")) {
-//            inlineKeyboardMarkup.getKeyboard().add(new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Назад")).callbackData("clickMyFavoritesViaFavorites").build()));
-//        } else {
-//            inlineKeyboardMarkup.getKeyboard().add(new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Назад")).callbackData("clickBackToHistory\n" + 1).build()));
-//        }
-//
-//        MangaDataDesu mangaDataDesu = mangaService.getMangaData(mangaId);
-//        Message message = telegramSender.sendEditMessageMedia(EditMessageMedia.builder()
-//                .messageId(callbackQuery.getMessage().getMessageId())
-//                .media(new InputMediaPhoto(mangaDataDesu.getImage().getOriginal()))
-//                .chatId(userId).build());
-//
-//        telegramSender.sendEditMessageCaption(EditMessageCaption.builder()
-//                .chatId(userId)
-//                .messageId(message.getMessageId())
-//                .parseMode("HTML")
-//                .replyMarkup(inlineKeyboardMarkup)
-//                .caption(mangaService.getMangaText(mangaDataDesu)).build());
-//    }
 
     public void clickMyFriend(CallbackQuery callbackQuery) {
         InlineKeyboardMarkup inlineKeyboardMarkup = getButtonsFriendList(callbackQuery);

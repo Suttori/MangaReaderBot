@@ -24,9 +24,9 @@ public class ReferralService {
     private LocaleService localeService;
 
     @Autowired
-    ReferralChannelRepository referralChannelRepository;
+    private ReferralChannelRepository referralChannelRepository;
     @Autowired
-    UserRepository userRepository;
+    private UserRepository userRepository;
 
     public ReferralService(TelegramSender telegramSender, LocaleService localeService) {
         this.telegramSender = telegramSender;
@@ -40,7 +40,7 @@ public class ReferralService {
             return true;
         }
 
-        if (userRepository.findByUserId(message.getChatId()).getPremiumBotUser() != null) {
+        if (userRepository.findByUserId(message.getChatId()).getIsPremiumBotUser() != null) {
             return true;
         }
 

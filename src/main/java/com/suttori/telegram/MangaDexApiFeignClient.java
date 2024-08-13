@@ -21,20 +21,16 @@ public interface MangaDexApiFeignClient {
     @RequestMapping(method = RequestMethod.GET, value = "/manga/{mangaId}?includes[]=cover_art")
     Response getMangaById(@PathVariable String mangaId);
 
-    @RequestMapping(method = RequestMethod.GET, value = "/manga/random?includes[]=cover_art")
-    Response getRandomManga(@RequestParam Map<String, List<String>> params);
-
-    @RequestMapping(method = RequestMethod.GET, value = "/chapter")
-    Response getChapterList(@RequestParam Map<String, String> params);
-
     @RequestMapping(method = RequestMethod.GET, value = "/manga/{mangaId}/aggregate")
     Response getChapterListAggregate(@PathVariable String mangaId, @RequestParam Map<String, List<String>> params);
 
-    @RequestMapping(method = RequestMethod.GET, value = "/manga/{mangaId}/feed")
-    Response getMangaFeed(@PathVariable String mangaId, @RequestParam Map<String, List<String>> params);
-
     @RequestMapping(method = RequestMethod.GET, value = "/at-home/server/{chapterId}")
     Response getChapterPageIds(@PathVariable String chapterId);
+
+    @RequestMapping(method = RequestMethod.GET, value = "/manga/tag/")
+    Response getTagsId();
+
+
 }
 
 

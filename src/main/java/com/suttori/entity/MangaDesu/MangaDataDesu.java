@@ -1,6 +1,8 @@
 package com.suttori.entity.MangaDesu;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.suttori.entity.MangaDex.Manga.SafeDescriptionDeserializer;
 
 import java.util.List;
 
@@ -27,6 +29,7 @@ public class MangaDataDesu {
     private Long checked;
     private Long updated;
     private List<MangaGenre> genres;
+    @JsonDeserialize(using = SafeMangaTranslatorsDeserializer.class)
     private List<MangaTranslator> translators;
     private String synonyms;
     private Long thread_id;

@@ -19,7 +19,12 @@ public interface MangaRepository extends JpaRepository<Manga, Long> {
 
     @Transactional
     @Modifying
-    @Query(value = "UPDATE manga SET cover_file_id = ? WHERE manga_id = ? AND catalog_name = ?", nativeQuery = true)
-    void setCoverFileId(@Param("cover_file_id") String cover_file_id, @Param("manga_id") String manga_id, @Param("catalog_name") String catalog_name);
+    @Query(value = "UPDATE manga SET cover_file_id = ? WHERE id = ?", nativeQuery = true)
+    void setCoverFileId(@Param("cover_file_id") String cover_file_id, @Param("id") Long id);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE manga SET cover_url = ? WHERE id = ?", nativeQuery = true)
+    void setCoverUrl(@Param("cover_url") String cover_url, @Param("id") Long id);
 
 }

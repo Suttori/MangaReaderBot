@@ -23,7 +23,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     User findByUserName(String userName);
 
-    ArrayList<User> findAllByPremiumBotUserIsNull();
+    ArrayList<User> findAllByIsPremiumBotUserIsNull();
 
     ArrayList<User> findAllByLastActivityAfter(Timestamp date);
 
@@ -54,18 +54,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Transactional
     @Modifying
-    @Query(value = "UPDATE \"user\" SET current_page_in_sticker_set_storage = ? WHERE user_id = ?", nativeQuery = true)
-    void setCurrentPageInStickerSetStorage(@Param("current_page_in_sticker_set_storage") int current_page_in_sticker_set_storage, @Param("user_id") Long user_id);
-
-    @Transactional
-    @Modifying
-    @Query(value = "UPDATE \"user\" SET current_sticker_set_address = ? WHERE user_id = ?", nativeQuery = true)
-    void setCurrentStickerSetAddress(@Param("current_sticker_set_address") String current_sticker_set_address, @Param("user_id") Long user_id);
-
-    @Transactional
-    @Modifying
-    @Query(value = "UPDATE \"user\" SET current_set_name = ? WHERE user_id = ?", nativeQuery = true)
-    void setCurrentSetName(@Param("current_set_name") String current_set_name, @Param("user_id") Long user_id);
+    @Query(value = "UPDATE \"user\" SET temporary_message_id = ? WHERE user_id = ?", nativeQuery = true)
+    void setTemporaryMessageId(@Param("temporary_message_id") String temporary_message_id, @Param("user_id") Long user_id);
 
     @Transactional
     @Modifying
@@ -89,22 +79,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Transactional
     @Modifying
-    @Query(value = "UPDATE \"user\" SET temporary_message_id = ? WHERE user_id = ?", nativeQuery = true)
-    void setTemporaryMessageId(@Param("temporary_message_id") Long temporary_message_id, @Param("user_id") Long user_id);
-
-    @Transactional
-    @Modifying
-    @Query(value = "UPDATE \"user\" SET temporary_source_sticker_set_name = ? WHERE user_id = ?", nativeQuery = true)
-    void setTemporarySourceStickerSetName(@Param("temporary_source_sticker_set_name") String temporary_source_sticker_set_name, @Param("user_id") Long user_id);
-
-    @Transactional
-    @Modifying
     @Query(value = "UPDATE \"user\" SET language_code = ? WHERE user_id = ?", nativeQuery = true)
     void setLocale(@Param("language_code") String language_code, @Param("user_id") Long user_id);
 
     @Transactional
     @Modifying
-    @Query(value = "UPDATE \"user\" SET temporary_file_unique_id = ? WHERE user_id = ?", nativeQuery = true)
-    void setTemporaryFileUniqueId(@Param("temporary_file_unique_id") String temporary_file_unique_id, @Param("user_id") Long user_id);
+    @Query(value = "UPDATE \"user\" SET manga_format_parameter = ? WHERE user_id = ?", nativeQuery = true)
+    void setMangaFormat(@Param("manga_format_parameter") String manga_format_parameter, @Param("user_id") Long user_id);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE \"user\" SET number_of_chapters_sent = ? WHERE user_id = ?", nativeQuery = true)
+    void setNumberOfChaptersSent(@Param("number_of_chapters_sent") String number_of_chapters_sent, @Param("user_id") Long user_id);
 
 }

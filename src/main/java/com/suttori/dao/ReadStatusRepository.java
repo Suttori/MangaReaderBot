@@ -9,4 +9,6 @@ public interface ReadStatusRepository extends JpaRepository<ReadStatus, Long> {
 
 
     ReadStatus findByMangaIdAndChapterIdAndUserIdAndCatalogName(String mangaId, String chapterId, Long userId, String catalogName);
+
+    boolean existsByMangaIdAndChapterIdAndUserIdAndCatalogName(String mangaId, String chapterId, Long userId, String catalogName);
 }
