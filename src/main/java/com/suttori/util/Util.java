@@ -137,6 +137,29 @@ public class Util {
         }
     }
 
+    public File downloadImageWithReferer(String imageUrl, File saveDir, String fileName) {
+        try {
+            URL url = new URL(imageUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestProperty("Referer", "https://desu.win/");
+
+            File savedFile = new File(saveDir, fileName);
+            try (InputStream in = connection.getInputStream();
+                 FileOutputStream fos = new FileOutputStream(savedFile)) {
+
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    fos.write(buffer, 0, bytesRead);
+                }
+            }
+
+            return savedFile;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public ImageData downloadImage(String imageUrl) {
         try {
             URL url = new URL(imageUrl);

@@ -64,8 +64,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Transactional
     @Modifying
-    @Query(value = "UPDATE \"user\" SET premium_bot_user = ? WHERE user_name = ?", nativeQuery = true)
-    void setPremium(@Param("premium_bot_user") String premium_bot_user, @Param("user_name") String userName);
+    @Query(value = "UPDATE \"user\" SET is_premium_bot_user = ? WHERE user_name = ?", nativeQuery = true)
+    void setPremium(@Param("is_premium_bot_user") Boolean is_premium_bot_user, @Param("user_name") String userName);
 
     @Transactional
     @Modifying

@@ -248,7 +248,7 @@ public class MessageHandler implements Handler<Update> {
                 } else if (message.getText().equals("Удалить мертвых юзеров 1488")) {
                     adminService.deleteDead(message);
                     return;
-                } else if (message.getText().contains("Подписка & ")) {
+                } else if (message.getText().contains("Подписка\n")) {
                     adminService.setPremium(message);
                     return;
                 } else if (message.getText().contains("Стата по ссылкам")) {

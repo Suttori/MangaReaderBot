@@ -55,13 +55,13 @@ public class SettingService {
 
         if (messageId != null) {
             telegramSender.sendEditMessageText(EditMessageText.builder()
-                    .text("В настройках вы можете найти мои контакты и изменить формат выдачи глав")
+                    .text("В настройках вы можете найти мои контакты, изменить формат выдачи глав и многое другое")
                     .messageId(messageId)
                     .replyMarkup(inlineKeyboardMarkup)
                     .chatId(userId).build());
         } else {
             telegramSender.send(SendMessage.builder()
-                    .text("В настройках вы можете найти мои контакты и изменить формат выдачи глав")
+                    .text("В настройках вы можете найти мои контакты, изменить формат выдачи глав и многое другое")
                     .chatId(userId)
                     .replyMarkup(inlineKeyboardMarkup).build());
         }
@@ -72,7 +72,7 @@ public class SettingService {
         if (user.getIsPremiumBotUser() == null || !user.getIsPremiumBotUser()) {
             telegramSender.sendAnswerCallbackQuery(AnswerCallbackQuery.builder()
                     .callbackQueryId(callbackQuery.getId())
-                    .text("Прости, но это функция доступна только тем, кто поддержал бот донатом. Она необязательна и призвана отблагодарить людей, которые поддерживают разработку бота. Подробнее читай в \"Поддержать донатом ☕\"") //
+                    .text("Прости, но это функция доступна только тем, кто поддержал бот донатом. Она необязательна и призвана отблагодарить людей, которые поддерживают разработку бота. Подробнее читай в \"Поддержать донатом ☕\"")
                     .showAlert(true).build());
             return;
         }
@@ -90,7 +90,7 @@ public class SettingService {
         }
 
         telegramSender.sendEditMessageText(EditMessageText.builder()
-                .text("Количество глав\n\n\n" + formatName)
+                .text("Для того чтобы загрузить несколько глав одним нажатием ты можешь нажать на соответствующую кнопку под главой. Здесь можешь выбрать сколько глав отправится после нажатия на эту кнопку.\n\n" + formatName)
                 .messageId(callbackQuery.getMessage().getMessageId())
                 .replyMarkup(new InlineKeyboardMarkup(new ArrayList<>(Arrays.asList(
                         new InlineKeyboardRow(InlineKeyboardButton.builder().text("3").callbackData("chooseNumberOfChaptersSent\n3").build(),
@@ -226,9 +226,10 @@ public class SettingService {
         )));
 
         telegramSender.sendEditMessageText(EditMessageText.builder()
-                .text("Если тебе нравится бот и ты хочешь поддержать его развитие и работу, то можешь сделать это по сслылке https://ko-fi.com/mangareaderbot")
+                .text("Если тебе нравится бот и ты хочешь поддержать его развитие и работу, то можешь сделать это по сслылкам: \nhttps://ko-fi.com/mangareaderbot\nhttps://patreon.com/mangareaderbot\n\n или лично @Suttori\n\nВсем кто поддержал бот финансово от 2$ доступна функция загрузки до 10 глав одним сообщением. Спасибо за поддержку ❤\uFE0F")
                 .messageId(callbackQuery.getMessage().getMessageId())
                 .replyMarkup(inlineKeyboardMarkup)
+                .disableWebPagePreview(true)
                 .chatId(callbackQuery.getMessage().getChatId()).build());
     }
 

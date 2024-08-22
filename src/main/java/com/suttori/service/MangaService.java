@@ -6,6 +6,7 @@ import com.suttori.dto.ChapterDto;
 import com.suttori.entity.*;
 import com.suttori.entity.User;
 import com.suttori.exception.CatalogNotFoundException;
+import com.suttori.service.interfaces.MangaServiceInterface;
 import com.suttori.telegram.*;
 import com.suttori.util.MangaUtil;
 import com.suttori.util.Util;
@@ -13,9 +14,7 @@ import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
-import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
-import org.telegram.telegrambots.meta.api.methods.CopyMessage;
+import org.telegram.telegrambots.meta.api.methods.*;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
@@ -329,6 +328,14 @@ public class MangaService {
     }
 
     public void handleChaptersPack(CallbackQuery callbackQuery) {
+        Long userId = callbackQuery.getFrom().getId();
+        User user = userRepository.findByUserId(userId);
+
+        if (user.getIsPremiumBotUser() == null || !user.getIsPremiumBotUser()) {
+            util.sendErrorMessage("Что-то не так с твоей подпиской. Попробуй еще раз и, если ошибка повторится, то обратись в поддержку", callbackQuery.getFrom().getId());
+            return;
+        }
+        List<Chapter> chapters = new ArrayList<>();
         String catalogName;
         try {
             catalogName = util.getSourceName(callbackQuery.getData());
@@ -337,7 +344,7 @@ public class MangaService {
             util.sendErrorMessage("Произошла ошибка при получении каталога, введен неправильный запрос или что-то другое. Попробуй еще раз и, если ошибка повторится, то обратись в поддержку", callbackQuery.getFrom().getId());
             return;
         }
-        Long userId = callbackQuery.getFrom().getId();
+
         ChapterDto chapterDto = mangaChapterRepository.findChapterDtoById(Long.valueOf(util.parseValue(callbackQuery.getData())[2]));
         Chapter chapter = mangaUtil.getChapterByDto(chapterDto);
 
@@ -349,39 +356,156 @@ public class MangaService {
         if (callbackQuery.getData().contains("nextChaptersPack\n") || callbackQuery.getData().contains("prevChaptersPack\n")) {
             deleteKeyboard(callbackQuery.getMessage().getMessageId(), userId);
         }
-        writeHistory(chapter, userId, catalogName);
 
-        User user = userRepository.findByUserId(userId);
-        List<Chapter> chapters = new ArrayList<>();
+        writeHistory(chapter, userId, catalogName);
         chapters.add(chapter);
         Chapter currentChapter = chapter;
-        for (int i = 0; i <= Integer.parseInt(user.getNumberOfChaptersSent()); i++) {
-            currentChapter = mangaUtil.getChapterByDto(mangaChapterRepository.findChapterDtoById(currentChapter.getNextChapter().getId()));
-            if (currentChapter.getNextChapter() != null) {
-                writeStatistic(currentChapter, userId, catalogName);
-                chapters.add(currentChapter);
+        for (int i = 1; i < Integer.parseInt(user.getNumberOfChaptersSent()); i++) {
+            if (callbackQuery.getData().contains("nextChaptersPack\n")) {
+                if (currentChapter.getNextChapter() != null) {
+                    currentChapter = mangaUtil.getChapterByDto(mangaChapterRepository.findChapterDtoById(currentChapter.getNextChapter().getId()));
+                    writeStatistic(currentChapter, userId, catalogName);
+                    chapters.add(currentChapter);
+                } else {
+                    sendChaptersPack(chapters, user);
+                    return;
+                }
             } else {
-                sendChaptersPack(chapters, user);
-                return;
+                if (currentChapter.getPrevChapter() != null) {
+                    currentChapter = mangaUtil.getChapterByDto(mangaChapterRepository.findChapterDtoById(currentChapter.getPrevChapter().getId()));
+                    writeStatistic(currentChapter, userId, catalogName);
+                    chapters.add(currentChapter);
+                } else {
+                    sendChaptersPack(chapters, user);
+                    return;
+                }
             }
         }
         sendChaptersPack(chapters, user);
     }
 
+    public Integer sendDownloadStatus(boolean flagEditMessageText, Integer tempDownloadMessageId, Chapter chapter, Long userId) {
+        if (flagEditMessageText) {
+            return telegramSender.send(SendMessage.builder()
+                    .chatId(userId)
+                    .text("Загружаю том " + chapter.getVol() + " главу " + chapter.getChapter() + "...").build()).getMessageId();
+        } else {
+            return telegramSender.sendEditMessageTextAsync(EditMessageText.builder()
+                    .text("Загружаю том " + chapter.getVol() + " главу " + chapter.getChapter() + "...")
+                    .messageId(tempDownloadMessageId)
+                    .chatId(userId).build()).getMessageId();
+        }
+    }
+
     public void sendChaptersPack(List<Chapter> chapters, User user) {
-        StringBuilder text = new StringBuilder();
+        StringBuilder textTelegraphArticleChapters = new StringBuilder();
+        List<MessageEntity> messageEntities = new ArrayList<>();
+        List<Integer> messageIds = new ArrayList<>();
+        Chapter lastChapter = chapters.get(chapters.size() - 1);
+        Integer tempDownloadMessageId = null;
+        boolean flagEditMessageText = true;
+
         for (Chapter chapter : chapters) {
             if ((user.getMangaFormatParameter() == null && (mangaUtil.isNotLongStripMangaDex(chapter) || mangaUtil.isMangaDesuMe(chapter))) || (user.getMangaFormatParameter() != null && user.getMangaFormatParameter().equals("telegraph"))) {
                 if (chapter.getTelegraphStatusDownload() != null && chapter.getTelegraphStatusDownload().equals("finished")) {
-                    text.append("\n").append(chapter.getTelegraphUrl());
+                    String chapterSting = "\n" + chapter.getName() + " Том " + chapter.getVol() + ". Глава " + chapter.getChapter();
+                    messageEntities.add(MessageEntity.builder()
+                            .type("text_link")
+                            .length(chapterSting.length())
+                            .offset(textTelegraphArticleChapters.length())
+                            .url(chapter.getTelegraphUrl()).build());
+                    textTelegraphArticleChapters.append(chapterSting);
                 } else {
+                    tempDownloadMessageId = sendDownloadStatus(flagEditMessageText, tempDownloadMessageId, chapter, user.getUserId());
+                    flagEditMessageText = false;
 
+                    Integer chapterMessageId = serviceConfig.mangaServices().get(chapter.getCatalogName()).createTelegraphArticleChapter(user.getUserId(), chapter);
+                    if (chapterMessageId == null) {
+                        log.error("chapterMessageId null");
+                        continue;
+                    }
+                    chapter = mangaUtil.getChapterByDto(mangaChapterRepository.findChapterDtoById(chapter.getId()));
+
+                    if (chapter.getTelegraphMessageId() != null && chapter.getTelegraphMessageId().equals(chapterMessageId)) {
+                        String chapterSting = "\n" + chapter.getName() + " Том " + chapter.getVol() + ". Глава " + chapter.getChapter();
+                        messageEntities.add(MessageEntity.builder()
+                                .type("text_link")
+                                .length(chapterSting.length())
+                                .offset(textTelegraphArticleChapters.length())
+                                .url(chapter.getTelegraphUrl()).build());
+                        textTelegraphArticleChapters.append(chapterSting);
+                    } else if (chapter.getPdfMessageId() != null && chapter.getPdfMessageId().equals(chapterMessageId)) {
+                        telegramSender.deleteMessageById(String.valueOf(user.getUserId()), tempDownloadMessageId);
+                        flagEditMessageText = true;
+                        if (!textTelegraphArticleChapters.isEmpty()) {
+                            telegramSender.send(SendMessage.builder()
+                                    .text(String.valueOf(textTelegraphArticleChapters))
+                                    .entities(messageEntities)
+                                    .chatId(user.getUserId()).build());
+                            textTelegraphArticleChapters = new StringBuilder();
+                            messageEntities.clear();
+                        }
+                        telegramSender.sendCopyMessage(CopyMessage.builder()
+                                .messageId(chapter.getPdfMessageId())
+                                .fromChatId("-1002092468371L")
+                                .chatId(user.getUserId()).build());
+                    }
                 }
-
             } else {
+                if (chapter.getPdfStatusDownload() != null && chapter.getPdfStatusDownload().equals("finished")) {
+                    messageIds.add(chapter.getPdfMessageId());
+                } else {
+                    if (!messageIds.isEmpty()) {
+                        messageIds.sort(Comparator.naturalOrder());
+                        telegramSender.sendCopyMessages(CopyMessages.builder()
+                                .chatId(user.getUserId())
+                                .fromChatId("-1002092468371L")
+                                .messageIds(messageIds).build());
+                        messageIds.clear();
+                    }
+                    Integer messageId = telegramSender.send(SendMessage.builder()
+                            .chatId(user.getUserId())
+                            .text("Загружаю том " + chapter.getVol() + " главу " + chapter.getChapter() + "...").build()).getMessageId();
 
+                    serviceConfig.mangaServices().get(chapter.getCatalogName()).createPdfChapter(user.getUserId(), chapter);
+                    chapter = mangaUtil.getChapterByDto(mangaChapterRepository.findChapterDtoById(chapter.getId()));
+                    if (chapter.getPdfMessageId() == null) {
+                        waitForUploadManhwa(user.getUserId(), chapter);
+                        telegramSender.deleteMessageById(String.valueOf(user.getUserId()), messageId);
+                        continue;
+                    }
+                    telegramSender.deleteMessageById(String.valueOf(user.getUserId()), messageId);
+                    telegramSender.sendCopyMessage(CopyMessage.builder()
+                            .messageId(chapter.getPdfMessageId())
+                            .fromChatId("-1002092468371L")
+                            .chatId(user.getUserId()).build());
+                }
             }
         }
+
+        if (!textTelegraphArticleChapters.isEmpty()) {
+            telegramSender.send(SendMessage.builder()
+                    .text(String.valueOf(textTelegraphArticleChapters))
+                    .entities(messageEntities)
+                    .replyMarkup(serviceConfig.mangaServices().get(lastChapter.getCatalogName()).getPrevNextButtons(lastChapter, user.getUserId()))
+                    .chatId(user.getUserId()).build());
+            telegramSender.deleteMessageById(String.valueOf(user.getUserId()), tempDownloadMessageId);
+        } else {
+            if (!messageIds.isEmpty()) {
+                messageIds.sort(Comparator.naturalOrder());
+                telegramSender.sendCopyMessages(CopyMessages.builder()
+                        .chatId(user.getUserId())
+                        .fromChatId("-1002092468371L")
+                        .messageIds(messageIds).build());
+            }
+            telegramSender.send(SendMessage.builder()
+                    .text("Навигация")
+                    .replyMarkup(serviceConfig.mangaServices().get(lastChapter.getCatalogName()).getPrevNextButtons(lastChapter, user.getUserId()))
+                    .chatId(user.getUserId()).build());
+
+        }
+
+
     }
 
     public void writeHistory(Chapter chapter, Long userId, String catalogName) {
@@ -403,11 +527,17 @@ public class MangaService {
 
     public void getChapterHandler(Chapter chapter, Long userId) {
         User user = userRepository.findByUserId(userId);
+        MangaServiceInterface service = serviceConfig.mangaServices().get(chapter.getCatalogName());
+
+//        if (user.getMangaFormatParameter() != null && user.getMangaFormatParameter().equals("cbz")) {
+//            Integer messageIdChapterInStorage = service.createCbzChapter(userId, chapter);
+//            sendChapterToUser(messageIdChapterInStorage, chapter, userId);
+//        } else
         if ((user.getMangaFormatParameter() == null && (mangaUtil.isNotLongStripMangaDex(chapter) || mangaUtil.isMangaDesuMe(chapter))) || (user.getMangaFormatParameter() != null && user.getMangaFormatParameter().equals("telegraph"))) {
             if (chapter.getTelegraphStatusDownload() != null && chapter.getTelegraphStatusDownload().equals("process")) {
                 waitForUploadManga(userId, chapter);
                 executorService.submit(() ->
-                        serviceConfig.mangaServices().get(chapter.getCatalogName()).preloadMangaChapter(userId, chapter)
+                        service.preloadMangaChapter(userId, chapter)
                 );
                 return;
             }
@@ -416,8 +546,10 @@ public class MangaService {
                         sendCopyMessageMangaFromMangaStorage(userId, chapter)
                 );
             } else {
-                executorService.submit(() ->
-                        serviceConfig.mangaServices().get(chapter.getCatalogName()).sendTelegraphArticle(userId, chapter)
+                executorService.submit(() -> {
+                            Integer messageIdChapterInStorage = service.createTelegraphArticleChapter(userId, chapter);
+                            sendChapterToUser(messageIdChapterInStorage, chapter, userId);
+                        }
                 );
             }
             executorService.submit(() ->
@@ -425,9 +557,11 @@ public class MangaService {
             );
         } else {
             if (chapter.getPdfStatusDownload() != null && chapter.getPdfStatusDownload().equals("process")) {
+                Integer messageIdForDelete = mangaUtil.sendWaitGIFAndAction(userId);
                 waitForUploadManhwa(userId, chapter);
+                telegramSender.deleteMessageById(String.valueOf(userId), messageIdForDelete);
                 executorService.submit(() ->
-                        serviceConfig.mangaServices().get(chapter.getCatalogName()).preloadManhwaChapter(userId, chapter)
+                        service.preloadManhwaChapter(userId, chapter)
                 );
                 return;
             }
@@ -436,19 +570,23 @@ public class MangaService {
                         sendCopyMessageManhwaFromMangaStorage(userId, chapter)
                 );
             } else {
-                executorService.submit(() ->
-                        serviceConfig.mangaServices().get(chapter.getCatalogName()).sendPDFChapter(userId, chapter)
+                executorService.submit(() -> {
+                            Integer messageIdForDelete = mangaUtil.sendWaitGIFAndAction(userId);
+                            Integer messageIdChapterInStorage = service.createPdfChapter(userId, chapter);
+                            sendChapterToUser(messageIdChapterInStorage, chapter, userId);
+                            telegramSender.deleteMessageById(String.valueOf(userId), messageIdForDelete);
+                        }
+
                 );
             }
             executorService.submit(() ->
-                    serviceConfig.mangaServices().get(chapter.getCatalogName()).preloadManhwaChapter(userId, chapter)
+                    service.preloadManhwaChapter(userId, chapter)
             );
         }
     }
 
 
     public void waitForUploadManhwa(Long userId, Chapter chapter) {
-        Integer messageIdForDelete = mangaUtil.sendWaitGIFAndAction(userId);
         for (int i = 0; i < 60; i++) {
             try {
                 ChapterDto chapterDto = mangaChapterRepository.findChapterDtoById(chapter.getId());
@@ -467,10 +605,10 @@ public class MangaService {
 
         if (chapter.getPdfStatusDownload().equals("process")) {
             mangaChapterRepository.setPdfStatusDownload(null, chapter.getId());
-            serviceConfig.mangaServices().get(chapter.getCatalogName()).sendPDFChapter(userId, chapter);
+            Integer messageId = serviceConfig.mangaServices().get(chapter.getCatalogName()).createPdfChapter(userId, chapter);
+            sendChapterToUser(messageId, chapter, userId);
         } else if (chapter.getPdfStatusDownload().equals("finished")) {
-            sendCopyMessageManhwaFromMangaStorage(userId, chapter);
-            telegramSender.deleteMessageById(String.valueOf(userId), messageIdForDelete);
+            sendChapterToUser(chapter.getPdfMessageId(), chapter, userId);
         }
     }
 
@@ -495,7 +633,7 @@ public class MangaService {
         //chapter = mangaChapterRepository.findById(chapter.getId()).get();
         if (chapter.getTelegraphStatusDownload().equals("process")) {
             mangaChapterRepository.setTelegraphStatusDownload(null, chapter.getId());
-            serviceConfig.mangaServices().get(chapter.getCatalogName()).sendTelegraphArticle(userId, chapter);
+            serviceConfig.mangaServices().get(chapter.getCatalogName()).createTelegraphArticleChapter(userId, chapter);
         } else if (chapter.getTelegraphStatusDownload().equals("finished")) {
             sendCopyMessageMangaFromMangaStorage(userId, chapter);
         }
@@ -514,7 +652,7 @@ public class MangaService {
             mangaChapterRepository.setTelegraphStatusDownload(null, chapter.getId());
             log.error("Copy message not send: " + chapter.getName() + " chapterId " + chapter.getChapterId() + " vol " + chapter.getVol() + " ch " + chapter.getChapter());
             e.printStackTrace();
-            serviceConfig.mangaServices().get(chapter.getCatalogName()).sendTelegraphArticle(userId, chapter);
+            serviceConfig.mangaServices().get(chapter.getCatalogName()).createTelegraphArticleChapter(userId, chapter);
         }
     }
 
@@ -530,7 +668,7 @@ public class MangaService {
             mangaChapterRepository.setPdfStatusDownload(null, chapter.getId());
             log.error("Copy message not send: " + chapter.getName() + " chapterId " + chapter.getChapterId() + " vol " + chapter.getVol() + " ch " + chapter.getChapter());
             e.printStackTrace();
-            serviceConfig.mangaServices().get(chapter.getCatalogName()).sendPDFChapter(userId, chapter);
+            serviceConfig.mangaServices().get(chapter.getCatalogName()).createPdfChapter(userId, chapter);
         }
     }
 
@@ -703,6 +841,17 @@ public class MangaService {
                 .replyMarkup(new InlineKeyboardMarkup(new ArrayList<>()))
                 .messageId(messageId)
                 .chatId(userId).build());
+    }
+
+    public void sendChapterToUser(Integer messageIdChapterInStorage, Chapter chapter, Long userId) {
+        if (messageIdChapterInStorage != null) {
+            InlineKeyboardMarkup inlineKeyboardMarkup = serviceConfig.mangaServices().get(chapter.getCatalogName()).getPrevNextButtons(chapter, userId);
+            telegramSender.sendCopyMessageFromStorage(CopyMessage.builder()
+                    .messageId(messageIdChapterInStorage)
+                    .replyMarkup(inlineKeyboardMarkup)
+                    .chatId(userId)
+                    .fromChatId(-1002092468371L).build());
+        }
     }
 
     public void doBackup() {

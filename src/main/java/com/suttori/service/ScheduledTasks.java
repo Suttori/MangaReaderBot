@@ -37,7 +37,7 @@ public class ScheduledTasks {
         this.mangaDexService = mangaDexService;
     }
 
-//    @Scheduled(cron = "0 */59 * * * *")
+    @Scheduled(cron = "0 */59 * * * *")
     public void ScheduledNotification() {
         logger.info("ScheduledNotificationDesuMe");
         desuMeService.sendNotificationAboutNewChapter();
@@ -45,7 +45,7 @@ public class ScheduledTasks {
         mangaDexService.sendNotificationAboutNewChapter();
     }
 
-//    @Scheduled(cron = "0 57 22 * * *")
+    @Scheduled(cron = "0 57 22 * * *")
     public void writeLastActivity() {
         logger.info("writeLastActivity");
         LastActivity lastActivity = new LastActivity();
@@ -54,7 +54,7 @@ public class ScheduledTasks {
         lastActivityRepository.save(lastActivity);
     }
 
-//    @Scheduled(cron = "0 */30 * * * *")
+    @Scheduled(cron = "0 */30 * * * *")
 //    @Scheduled(cron = "0 * * * * *")
     public void writeDownloadChaptersStat() {
         logger.info("writeDownloadChaptersStat");

@@ -13,6 +13,7 @@ import com.itextpdf.layout.element.Image;
 import com.suttori.dao.*;
 import com.suttori.dto.ChapterDto;
 import com.suttori.entity.*;
+import com.suttori.entity.MangaDesu.MangaPage;
 import com.suttori.entity.MangaDex.Tag.TagData;
 import com.suttori.entity.MangaDex.Tag.TagResponse;
 import com.suttori.entity.NotificationChapterMapping;
@@ -855,91 +856,75 @@ public class MangaDexService implements MangaServiceInterface<MangaDataMangaDex>
         }
     }
 
+
     @Override
-    public void sendTelegraphArticle(Long userId, Chapter chapter) {
+    public Integer createTelegraphArticleChapter(Long userId, Chapter chapter) {
         List<String> urlList = getUrlPageList(chapter.getChapterId());
         if (urlList == null || urlList.isEmpty()) {
             util.sendErrorMessage("Данная глава доступна только на странице создателя, к сожалению это можно проверить только при ее загрузке, ссылки на все главы можно найти тут: \nhttps://mangadex.org/title/" + chapter.getMangaId() + "/", userId);
-            return;
+            return null;
         }
-        try {
-            List<Node> content = new ArrayList<>();
-            for (String url : urlList) {
-                content.add(mangaUtil.createImage(url));
-            }
 
-            mangaChapterRepository.setTelegraphStatusDownload("process", chapter.getId());
-
-            CreatePage createPage = new CreatePage(telegraphApiToken, chapter.getName() + " Vol " + chapter.getVol() + ". Chapter " + chapter.getChapter(), content)
-                    .setAuthorName(telegraphAuthorName)
-                    .setAuthorUrl(telegraphAuthorUrl)
-                    .setReturnContent(true);
-
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-            Response response = telegraphApiFeignClient.createPage(createPage);
-            String jsonResponse = new String(response.body().asInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            PageResponse result = objectMapper.readValue(jsonResponse, PageResponse.class);
-            Page page = result.getResult();
-
-            List<MessageEntity> messageEntityList = new ArrayList<>();
-            messageEntityList.add(MessageEntity.builder()
-                    .type("bold")
-                    .length(chapter.getName().length())
-                    .offset(0).build());
-
-            messageEntityList.add(MessageEntity.builder()
-                    .type("text_link")
-                    .url(page.getUrl())
-                    .length(chapter.getName().length())
-                    .offset(0).build());
-
-            SendMessage sendMessage = new SendMessage("-1002092468371L", chapter.getName() + "\n" + "Том " + chapter.getVol() + ". Глава " + chapter.getChapter());
-            sendMessage.setEntities(messageEntityList);
-
-            InlineKeyboardMarkup inlineKeyboardMarkup = getPrevNextButtons(chapter, userId);
-
-            Integer messageId = telegramSender.send(sendMessage).getMessageId();
-
-            if (messageId != null) {
-                mangaChapterRepository.setTelegraphMessageId(messageId, chapter.getId());
-                mangaChapterRepository.setTelegraphStatusDownload("finished", chapter.getId());
-                mangaChapterRepository.setTelegraphUrl(page.getUrl(), chapter.getId());
-
-                if (inlineKeyboardMarkup != null) {
-                    telegramSender.sendCopyMessageFromStorage(CopyMessage.builder()
-                            .messageId(messageId)
-                            .replyMarkup(inlineKeyboardMarkup)
-                            .chatId(userId)
-                            .fromChatId(-1002092468371L).build());
-                } else {
-                    telegramSender.sendCopyMessageFromStorage(CopyMessage.builder()
-                            .messageId(messageId)
-                            .chatId(userId)
-                            .fromChatId(-1002092468371L).build());
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        List<Node> content = new ArrayList<>();
+        for (String url : urlList) {
+            content.add(mangaUtil.createImage(url));
         }
+
+        mangaChapterRepository.setTelegraphStatusDownload("process", chapter.getId());
+        Page page = mangaUtil.createTelegraphPage(chapter, content);
+        Integer messageIdChapterInStorage = mangaUtil.sendChapterInStorage(chapter, page);
+        if (messageIdChapterInStorage != null) {
+            mangaChapterRepository.setTelegraphMessageId(messageIdChapterInStorage, chapter.getId());
+            mangaChapterRepository.setTelegraphStatusDownload("finished", chapter.getId());
+            mangaChapterRepository.setTelegraphUrl(page.getUrl(), chapter.getId());
+        }
+        return messageIdChapterInStorage;
     }
 
     @Override
-    public void sendPDFChapter(Long userId, Chapter chapter) {
+    public Integer createPdfChapter(Long userId, Chapter chapter) {
+        if (chapter == null || (chapter.getPdfStatusDownload() != null && chapter.getPdfStatusDownload().equals("process"))) {
+            //TODO
+            return null;
+        }
+
+        if ((chapter.getPdfStatusDownload() != null && chapter.getPdfStatusDownload().equals("finished"))) {
+            return chapter.getPdfMessageId();
+        }
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd_MM_yyyy_HH_mm_ss");
+        List<String> urlList = getUrlPageList(chapter.getChapterId());
+        if (urlList == null || urlList.isEmpty()) {
+            util.sendErrorMessage("Данная глава доступна только на странице создателя, к сожалению это можно проверить только при ее загрузке, ссылку на главы можно найти тут: \nhttps://mangadex.org/title/" + chapter.getMangaId() + "/", userId);
+            return null;
+        }
+        mangaChapterRepository.setPdfStatusDownload("process", chapter.getId());
+
+        File pdfFolder = util.createStorageFolder("TempPdfStorage");
+        String pdfFileName = pdfFolder + File.separator + chapter.getName().replace(" ", "_")
+                .replace(".", "_").replace("/", "_") + "_Vol_" + chapter.getVol()
+                .replace(".", "_") + "_Chapter_" + chapter.getChapter().replace(".", "_") +
+                "_From_" + userId + "_" + dateFormat.format(new Timestamp(System.currentTimeMillis())) + ".pdf";
+        File pdfFile = createPdf(urlList, pdfFileName, chapter, userId);
+
+        Integer messageIdChapterInStorage = telegramSender.sendDocument(SendDocument.builder()
+                .caption(chapter.getName() + "\n" + "Том " + chapter.getVol() + ". Глава " + chapter.getChapter())
+                .document(new InputFile(pdfFile))
+                .chatId("-1002092468371L").build()).getMessageId();
+
+        if (messageIdChapterInStorage != null) {
+            mangaChapterRepository.setPdfMessageId(messageIdChapterInStorage, chapter.getId());
+            mangaChapterRepository.setPdfStatusDownload("finished", chapter.getId());
+        }
+        pdfFile.delete();
+        return messageIdChapterInStorage;
+    }
+
+    public Integer createCbzChapter(Long userId, Chapter chapter) {
+        return null;
+    }
+
+    public File createPdf(List<String> urlList, String pdfFileName, Chapter chapter, Long userId) {
         try {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd_MM_yyyy_HH_mm_ss");
-            List<String> urlList = getUrlPageList(chapter.getChapterId());
-
-            if (urlList == null || urlList.isEmpty()) {
-                util.sendErrorMessage("Данная глава доступна только на странице создателя, к сожалению это можно проверить только при ее загрузке, ссылку на главы можно найти тут: \nhttps://mangadex.org/title/" + chapter.getMangaId() + "/", userId);
-                return;
-            }
-            mangaChapterRepository.setPdfStatusDownload("process", chapter.getId());
-
-            File pdfFolder = util.createStorageFolder("TempPdfStorage");
-
-            Integer messageIdForDelete = mangaUtil.sendWaitGIFAndAction(userId);
-            String pdfFileName = pdfFolder + File.separator + chapter.getName().replace(" ", "_").replace(".", "_").replace("/", "_") + "_Vol_" + chapter.getVol().replace(".", "_") + "_Chapter_" + chapter.getChapter().replace(".", "_") + "_From_" + userId + "_" + dateFormat.format(new Timestamp(System.currentTimeMillis())) + ".pdf";
             PdfWriter pdfWriter = new PdfWriter(pdfFileName);
             PdfDocument pdfDoc = new PdfDocument(pdfWriter);
             Document doc = new Document(pdfDoc);
@@ -967,61 +952,39 @@ public class MangaDexService implements MangaServiceInterface<MangaDataMangaDex>
                 }
             }
             doc.close();
-            File pdfFile = compressImages(pdfFileName, chapter, userId, 0.9, urlList);
-            SendDocument sendDocument = new SendDocument("-1002092468371L", new InputFile(pdfFile));
-            sendDocument.setCaption(chapter.getName() + "\n" + "Том " + chapter.getVol() + ". Глава " + chapter.getChapter());
-            InlineKeyboardMarkup inlineKeyboardMarkup = getPrevNextButtons(chapter, userId);
-
-            Integer messageId = telegramSender.sendDocument(sendDocument).getMessageId();
-
-            if (messageId != null) {
-                mangaChapterRepository.setPdfMessageId(messageId, chapter.getId());
-                mangaChapterRepository.setPdfStatusDownload("finished", chapter.getId());
-
-                if (inlineKeyboardMarkup != null) {
-                    telegramSender.sendCopyMessageFromStorage(CopyMessage.builder()
-                            .messageId(messageId)
-                            .replyMarkup(inlineKeyboardMarkup)
-                            .chatId(userId)
-                            .fromChatId(-1002092468371L).build());
-                } else {
-                    telegramSender.sendCopyMessageFromStorage(CopyMessage.builder()
-                            .messageId(messageId)
-                            .chatId(userId)
-                            .fromChatId(-1002092468371L).build());
-                }
-            }
-            pdfFile.delete();
-
-            telegramSender.deleteMessageById(String.valueOf(userId), messageIdForDelete);
+            return compressImages(pdfFileName, chapter, userId, 0.9, urlList);
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
     @Override
     public InlineKeyboardMarkup getPrevNextButtons(Chapter chapter, Long userId) {
         InlineKeyboardMarkup inlineKeyboardMarkup;
-        //String readStatus = readStatusRepository.findByMangaIdAndChapterIdAndUserIdAndCatalogName(chapter.getMangaId(), chapter.getChapterId(), userId, mangaDex) != null ? "✅" : "\uD83D\uDCD5";
         String readStatus = readStatusRepository.existsByMangaIdAndChapterIdAndUserIdAndCatalogName(chapter.getMangaId(), chapter.getChapterId(), userId, mangaDex) ? "✅" : "\uD83D\uDCD5";
+        User user = userRepository.findByUserId(userId);
 
         if (chapter.getPrevChapter() == null && chapter.getNextChapter() == null) {
             inlineKeyboardMarkup = null;
         } else if (chapter.getPrevChapter() == null) {
             inlineKeyboardMarkup = new InlineKeyboardMarkup(new ArrayList<>(List.of(
                     new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Список глав")).switchInlineQueryCurrentChat(mangaDex + "\nmangaId:\n" + chapter.getMangaId() + "\n" + chapter.getLanguageCode()).build()),
+                    user.getIsPremiumBotUser() != null && user.getIsPremiumBotUser() && user.getNumberOfChaptersSent() != null ? new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Следующие " + user.getNumberOfChaptersSent())).callbackData(mangaDex + "\nnextChaptersPack\n" + chapter.getNextChapter().getId() + "\n" + user.getNumberOfChaptersSent()).build()) : new InlineKeyboardRow(),
                     new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode(readStatus)).callbackData(mangaDex + "\nreadStatus\n" + chapter.getId()).build(),
                             InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Следующая глава")).callbackData(mangaDex + "\nnextChapter\n" + chapter.getNextChapter().getId()).build())
             )));
         } else if (chapter.getNextChapter() == null) {
             inlineKeyboardMarkup = new InlineKeyboardMarkup(new ArrayList<>(List.of(
                     new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Список глав")).switchInlineQueryCurrentChat(mangaDex + "\nmangaId:\n" + chapter.getMangaId() + "\n" + chapter.getLanguageCode()).build()),
+                    user.getIsPremiumBotUser() != null && user.getIsPremiumBotUser() && user.getNumberOfChaptersSent() != null ? new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Предыдущие " + user.getNumberOfChaptersSent())).callbackData(mangaDex + "\nprevChaptersPack\n" + chapter.getPrevChapter().getId() + "\n" + user.getNumberOfChaptersSent()).build()) : new InlineKeyboardRow(),
                     new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Предыдущая глава")).callbackData(mangaDex + "\nprevChapter\n" + chapter.getPrevChapter().getId()).build(),
                             InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode(readStatus)).callbackData(mangaDex + "\nreadStatus\n" + chapter.getId()).build())
             )));
         } else {
             inlineKeyboardMarkup = new InlineKeyboardMarkup(new ArrayList<>(List.of(
                     new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Список глав")).switchInlineQueryCurrentChat(mangaDex + "\nmangaId:\n" + chapter.getMangaId() + "\n" + chapter.getLanguageCode()).build()),
+                    user.getIsPremiumBotUser() != null && user.getIsPremiumBotUser() && user.getNumberOfChaptersSent() != null ? new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Предыдущие " + user.getNumberOfChaptersSent())).callbackData(mangaDex + "\nprevChaptersPack\n" + chapter.getPrevChapter().getId() + "\n" + user.getNumberOfChaptersSent()).build(),
+                            InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Следующие " + user.getNumberOfChaptersSent())).callbackData(mangaDex + "\nnextChaptersPack\n" + chapter.getNextChapter().getId() + "\n" + user.getNumberOfChaptersSent()).build()) : new InlineKeyboardRow(),
                     new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Назад")).callbackData(mangaDex + "\nprevChapter\n" + chapter.getPrevChapter().getId()).build(),
                             InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode(readStatus)).callbackData(mangaDex + "\nreadStatus\n" + chapter.getId()).build(),
                             InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Дальше")).callbackData(mangaDex + "\nnextChapter\n" + chapter.getNextChapter().getId()).build())

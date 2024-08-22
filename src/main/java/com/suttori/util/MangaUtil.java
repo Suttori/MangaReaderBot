@@ -1,5 +1,7 @@
 package com.suttori.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.geom.PageSize;
@@ -11,7 +13,9 @@ import com.suttori.dto.ChapterDto;
 import com.suttori.entity.*;
 import com.suttori.exception.CatalogNotFoundException;
 import com.suttori.telegram.TelegramSender;
+import com.suttori.telegram.TelegraphApiFeignClient;
 import com.vdurmont.emoji.EmojiParser;
+import feign.Response;
 import lombok.extern.slf4j.Slf4j;
 import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFmpegExecutor;
@@ -19,24 +23,39 @@ import net.bramp.ffmpeg.FFprobe;
 import net.bramp.ffmpeg.builder.FFmpegBuilder;
 import net.bramp.ffmpeg.probe.FFmpegStream;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
+import org.telegram.telegrambots.meta.api.methods.CopyMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.inputmessagecontent.InputTextMessageContent;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResult;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultArticle;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegraph.api.methods.CreatePage;
 import org.telegram.telegraph.api.objects.Node;
 import org.telegram.telegraph.api.objects.NodeElement;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.MalformedURLException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Service
 @Slf4j
 public class MangaUtil {
+
+    @Value("${telegraphApiToken}")
+    private String telegraphApiToken;
+    @Value("${telegraphAuthorName}")
+    private String telegraphAuthorName;
+    @Value("${telegraphAuthorUrl}")
+    private String telegraphAuthorUrl;
 
     private ReadStatusRepository readStatusRepository;
     private TelegramSender telegramSender;
@@ -46,14 +65,17 @@ public class MangaUtil {
     private UserSortPreferencesRepository userSortPreferencesRepository;
     private MangaStatusParameterRepository mangaStatusParameterRepository;
 
+    private TelegraphApiFeignClient telegraphApiFeignClient;
+
     @Autowired
-    public MangaUtil(ReadStatusRepository readStatusRepository, TelegramSender telegramSender, Util util, MangaChapterRepository mangaChapterRepository, UserSortPreferencesRepository userSortPreferencesRepository, MangaStatusParameterRepository mangaStatusParameterRepository) {
+    public MangaUtil(ReadStatusRepository readStatusRepository, TelegramSender telegramSender, Util util, MangaChapterRepository mangaChapterRepository, UserSortPreferencesRepository userSortPreferencesRepository, MangaStatusParameterRepository mangaStatusParameterRepository, TelegraphApiFeignClient telegraphApiFeignClient) {
         this.readStatusRepository = readStatusRepository;
         this.telegramSender = telegramSender;
         this.util = util;
         this.mangaChapterRepository = mangaChapterRepository;
         this.userSortPreferencesRepository = userSortPreferencesRepository;
         this.mangaStatusParameterRepository = mangaStatusParameterRepository;
+        this.telegraphApiFeignClient = telegraphApiFeignClient;
     }
 
 
@@ -256,6 +278,43 @@ public class MangaUtil {
         return sortedChapters;
     }
 
+    public Page createTelegraphPage(Chapter chapter, List<Node> content) {
+        try {
+            CreatePage createPage = new CreatePage(telegraphApiToken, chapter.getName() + " Vol " + chapter.getVol() + ". Chapter " + chapter.getChapter(), content)
+                    .setAuthorName(telegraphAuthorName)
+                    .setAuthorUrl(telegraphAuthorUrl)
+                    .setReturnContent(true);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+            Response response = telegraphApiFeignClient.createPage(createPage);
+            String jsonResponse = new String(response.body().asInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            PageResponse result = objectMapper.readValue(jsonResponse, PageResponse.class);
+            return result.getResult();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Integer sendChapterInStorage(Chapter chapter, Page page) {
+        List<MessageEntity> messageEntityList = new ArrayList<>();
+        messageEntityList.add(MessageEntity.builder()
+                .type("bold")
+                .length(chapter.getName().length())
+                .offset(0).build());
+        messageEntityList.add(MessageEntity.builder()
+                .type("text_link")
+                .url(page.getUrl())
+                .length(chapter.getName().length())
+                .offset(0).build());
+
+        SendMessage sendMessage = SendMessage.builder()
+                .text(chapter.getName() + "\n" + "Том " + chapter.getVol() + ". Глава " + chapter.getChapter())
+                .chatId("-1002092468371L")
+                .entities(messageEntityList).build();
+        return telegramSender.send(sendMessage).getMessageId();
+    }
+
 
 
     public UserSortPreferences getUserSortPreferences(Long userId, String catalogName) {
@@ -276,5 +335,9 @@ public class MangaUtil {
             }
         }
     }
+
+
+
+
 
 }

@@ -183,6 +183,16 @@ public class TelegramSender {
         }
     }
 
+    public void sendCopyMessages(CopyMessages copyMessages) {
+        logger.info("sendCopyMessages " + copyMessages.getChatId());
+        try {
+            telegramClient.executeAsync(copyMessages).get();
+        } catch (ExecutionException | InterruptedException | TelegramApiException e) {
+            logger.error("Failed sendCopyMessages " + copyMessages.getChatId(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
     public void resendCopyMessageFromStorage(CopyMessage copyMessage) throws ExecutionException, InterruptedException {
         logger.info("resendCopyMessageFromStorage " + copyMessage.getChatId());
         try {
@@ -285,27 +295,24 @@ public class TelegramSender {
     }
 
     public List<User> prepareSendAdsThread(List<User> users, Message message) {
-        AtomicInteger counter = new AtomicInteger(0);
-        EditMessageText editMessageText = new EditMessageText("");
-        editMessageText.setChatId(message.getChatId());
-        editMessageText.setMessageId(message.getMessageId());
-        final double[] percent = {0.01};
-        int totalCount = users.size();
-        int fivePercent = (int) Math.round(totalCount * percent[0]);
+        EditMessageText editMessageText = EditMessageText.builder()
+                .messageId(message.getMessageId())
+                .text("")
+                .chatId(message.getChatId()).build();
 
-        logger.info(String.valueOf(ForkJoinPool.commonPool()));
+        int totalUsers = users.size();
 
-        return users.parallelStream()
-                .peek(user -> {
-                    int currentCounter = counter.incrementAndGet();
-                    if (fivePercent != 0 && currentCounter % fivePercent == 0) {
-                        editMessageText.setText("Пройдено " + Math.round(percent[0] * 100) + "%");
-                        sendEditMessageText(editMessageText);
-                        percent[0] += 0.01;
-                    }
-                })
-                .filter(user -> telegramApiFeignClient.sendChatAction(token, user.getChatId(), "typing").reason().equals("OK"))
-                .collect(Collectors.toList());
+        List<User> filteredUsers = new ArrayList<>();
+        for (int i = 0; i < totalUsers; i++) {
+            if ((i != 0 && i % 200 == 0) || i == totalUsers - 1) {
+                editMessageText.setText("Пройдено " + i + " из " + totalUsers);
+                sendEditMessageText(editMessageText);
+            }
+            if (telegramApiFeignClient.sendChatAction(token, users.get(i).getChatId(), "typing").reason().equals("OK")) {
+                filteredUsers.add(users.get(i));
+            }
+        }
+        return filteredUsers;
     }
 
     public List<User> prepareDeleteDeadThread(List<User> users, Message message) {

@@ -597,14 +597,21 @@ public class AdminService {
     }
 
     public void setPremium(Message message) {
-        List<String> stringList = parser(message);
-        String premium = stringList.get(0);
-        String userName = stringList.get(1);
+        String userName = util.parseValue(message.getText())[1];
+        User user = userRepository.findByUserName(userName);
 
-        userRepository.setPremium(premium, userName);
-        telegramSender.send(SendMessage.builder()
-                .text("Все ок")
-                .chatId(message.getChatId()).build());
+        if (user != null) {
+            userRepository.setPremium(true, userName);
+            telegramSender.send(SendMessage.builder()
+                    .text("Пользователю с юзернеймом '" + userName + "' успешно присвоен премиум статус")
+                    .chatId(message.getChatId()).build());
+        } else {
+            telegramSender.send(SendMessage.builder()
+                    .text("Пользователь с юзернеймом '" + userName + "' не найден")
+                    .chatId(message.getChatId()).build());
+        }
+
+
     }
 
     public void createFile(Message message) {
