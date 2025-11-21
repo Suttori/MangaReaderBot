@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@FeignClient(name = "desuMeApiFeignClient", url = "https://desu.win/", configuration = FeignConfig.class)
+@FeignClient(name = "desuMeApiFeignClient", url = "https://x.desu.city/", configuration = FeignConfig.class)
 public interface DesuMeApiFeignClient {
 
     @RequestMapping(method = RequestMethod.GET, value = "/manga/api/")

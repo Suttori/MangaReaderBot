@@ -1,9 +1,6 @@
 package com.suttori.config;
 
-import com.suttori.service.DesuMeService;
-import com.suttori.service.MangaDexService;
-import com.suttori.service.SortFilterDesuMeService;
-import com.suttori.service.SortFilterMangaDexService;
+import com.suttori.service.*;
 import com.suttori.service.interfaces.MangaServiceInterface;
 import com.suttori.service.interfaces.SortFilterInterface;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,13 +17,15 @@ public class ServiceConfig {
 
     private DesuMeService desuMeService;
     private MangaDexService mangaDexService;
+    private UsagiService usagiService;
     private SortFilterDesuMeService sortFilterDesuMeService;
     private SortFilterMangaDexService sortFilterMangaDexService;
 
     @Autowired
-    public ServiceConfig(DesuMeService desuMeService, MangaDexService mangaDexService, SortFilterDesuMeService sortFilterDesuMeService, SortFilterMangaDexService sortFilterMangaDexService) {
+    public ServiceConfig(DesuMeService desuMeService, MangaDexService mangaDexService, UsagiService usagiService, SortFilterDesuMeService sortFilterDesuMeService, SortFilterMangaDexService sortFilterMangaDexService) {
         this.desuMeService = desuMeService;
         this.mangaDexService = mangaDexService;
+        this.usagiService = usagiService;
         this.sortFilterDesuMeService = sortFilterDesuMeService;
         this.sortFilterMangaDexService = sortFilterMangaDexService;
     }
@@ -36,6 +35,7 @@ public class ServiceConfig {
         Map<String, MangaServiceInterface> mangaServices = new HashMap<>();
         mangaServices.put("desu.me", this.desuMeService);
         mangaServices.put("mangadex.org", this.mangaDexService);
+        mangaServices.put("usagi", this.usagiService);
         return mangaServices;
     }
 

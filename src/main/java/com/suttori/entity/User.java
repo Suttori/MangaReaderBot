@@ -3,9 +3,9 @@ package com.suttori.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.checkerframework.common.aliasing.qual.Unique;
 
 import java.sql.Timestamp;
-import java.util.Set;
 
 @Entity(name = "\"user\"")
 @Getter
@@ -39,6 +39,7 @@ public class User {
     private String mangaFormatParameter;
     private String temporaryMessageId;
     private String numberOfChaptersSent;
+    private String privateSettings;
 
 
     public User() {

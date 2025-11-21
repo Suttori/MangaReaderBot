@@ -3,7 +3,9 @@ package com.suttori.service.interfaces;
 import com.suttori.entity.Chapter;
 import com.suttori.entity.MangaButtonData;
 import com.suttori.entity.User;
+import com.suttori.exception.AwsServerException;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -15,8 +17,6 @@ public interface MangaServiceInterface<T> {
 
     void sendMangaById(Long userId, String mangaId);
 
-    void sendMangaById(Long userId, String mangaId, String languageCode);
-
     void sendMangaByDatabaseId(Long userId, String mangaDatabaseId);
 
     void clickNotification(CallbackQuery callbackQuery);
@@ -27,7 +27,7 @@ public interface MangaServiceInterface<T> {
 
     InlineKeyboardMarkup getMangaButtons(MangaButtonData mangaButtonData);
 
-    Integer createTelegraphArticleChapter(Long userId, Chapter chapter);
+    Integer createTelegraphArticleChapter(Long userId, Chapter chapter, EditMessageCaption editMessageCaption);
 
     Integer createPdfChapter(Long userId, Chapter chapter);
 

@@ -9,6 +9,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MangaSearchResponse {
 
     @JsonProperty("response")

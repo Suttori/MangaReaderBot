@@ -1,4 +1,4 @@
-package com.suttori.entity;
+package com.suttori.entity.MangaDesu;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;

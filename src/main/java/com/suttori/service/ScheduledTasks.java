@@ -54,7 +54,8 @@ public class ScheduledTasks {
         lastActivityRepository.save(lastActivity);
     }
 
-    @Scheduled(cron = "0 */30 * * * *")
+    @Scheduled(cron = "0 00 12 * * *")
+//    @Scheduled(cron = "0 */60 * * * *")
 //    @Scheduled(cron = "0 * * * * *")
     public void writeDownloadChaptersStat() {
         logger.info("writeDownloadChaptersStat");

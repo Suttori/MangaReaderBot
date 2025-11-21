@@ -1,10 +1,14 @@
 package com.suttori.telegram;
 
 
+import com.suttori.entity.CryptoPay.Invoice;
 import com.suttori.processor.Processor;
+import com.suttori.service.AwsServerService;
+import com.suttori.service.CryptoPayPaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.util.*;
@@ -14,9 +18,20 @@ import java.util.concurrent.*;
 @Component
 public class TelegramUpdateReceiver implements LongPollingUpdateConsumer {
 
+
     private Processor processor;
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
     private final ConcurrentHashMap<Long, ConcurrentHashMap<Long, List<Update>>> userUpdateMap = new ConcurrentHashMap<>();
+    private CryptoPayPaymentService cryptoPayPaymentService;
+
+
+    private TelegramSender telegramSender;
+
+    @Autowired
+    public TelegramUpdateReceiver(CryptoPayPaymentService cryptoPayPaymentService, TelegramSender telegramSender) {
+        this.cryptoPayPaymentService = cryptoPayPaymentService;
+        this.telegramSender = telegramSender;
+    }
 
     @Autowired
     public void setProcessor(Processor processor) {
@@ -25,7 +40,17 @@ public class TelegramUpdateReceiver implements LongPollingUpdateConsumer {
 
     @Override
     public void consume(List<Update> updates) {
-         //processor.process(updates);
+
+//
+//        Invoice invoice = cryptoPayPaymentService.createInvoice("crypto", "USDT", null, "28", "userInfo");
+//
+//        telegramSender.send(SendMessage.builder()
+//                .text(invoice.getMiniAppInvoiceUrl())
+//                .chatId(updates.get(0).getMessage().getFrom().getId()).build());
+
+        //processor.process(updates);
+
+
         Long userId = getUserId(updates.get(0));
         if (userId == null) {
             return;

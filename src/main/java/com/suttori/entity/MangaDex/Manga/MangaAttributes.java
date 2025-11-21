@@ -32,5 +32,6 @@ public class MangaAttributes {
     private int version;
     private String createdAt;
     private String updatedAt;
+    private String officialLinks;
 
 }

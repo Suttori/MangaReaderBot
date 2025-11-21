@@ -10,6 +10,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MangaDataAsSearchResult {
 
     private Long id;

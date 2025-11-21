@@ -41,6 +41,7 @@ public class Chapter {
     private String type;
     private String format;
     private String name;
+    private String chapterName;
     private String telegraphUrl;
     private String vol;
     private String chapter;
@@ -53,7 +54,7 @@ public class Chapter {
     public Chapter() {
     }
 
-    public Chapter(String catalogName, String mangaId, String chapterId, String name, String vol, String chapter, Timestamp addedAt, String format, Long mangaDataBaseId, String type, String languageCode) {
+    public Chapter(String catalogName, String mangaId, String chapterId, String name, String vol, String chapter, Timestamp addedAt, String format, Long mangaDataBaseId, String type, String languageCode, String chapterName) {
         this.catalogName = catalogName;
         this.mangaId = mangaId;
         this.chapterId = chapterId;
@@ -65,14 +66,7 @@ public class Chapter {
         this.mangaDataBaseId = mangaDataBaseId;
         this.type = type;
         this.languageCode = languageCode;
-    }
-
-    public Chapter(String mangaId, String name, String vol, String chapter, String status) {
-        this.mangaId = mangaId;
-        this.name = name;
-        this.vol = vol;
-        this.chapter = chapter;
-        this.status = status;
+        this.chapterName = chapterName;
     }
 
 }

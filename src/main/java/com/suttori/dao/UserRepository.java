@@ -29,6 +29,23 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Transactional
     @Modifying
+    @Query(value = "INSERT INTO \"user\" (user_id, chat_id, first_name, last_name, user_name, language_code, is_telegram_premium, register_time, position, referral, access_status, is_alive, balance, last_activity) " +
+            "VALUES (:userId, :chatId, :firstName, :lastName, :userName, :languageCode, :isTelegramPremium, CURRENT_TIMESTAMP, 'DEFAULT', NULL, true, true, 0, CURRENT_TIMESTAMP) " +
+            "ON CONFLICT (user_id) " +
+            "DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, user_name = EXCLUDED.user_name, language_code = EXCLUDED.language_code, is_telegram_premium = EXCLUDED.is_telegram_premium, " +
+            "chat_id = EXCLUDED.chat_id, access_status = EXCLUDED.access_status, is_alive = EXCLUDED.is_alive, balance = EXCLUDED.balance, last_activity = EXCLUDED.last_activity",
+            nativeQuery = true)
+    void upsertUser(@Param("userId") Long userId,
+                    @Param("chatId") Long chatId,
+                    @Param("firstName") String firstName,
+                    @Param("lastName") String lastName,
+                    @Param("userName") String userName,
+                    @Param("languageCode") String languageCode,
+                    @Param("isTelegramPremium") Boolean isTelegramPremium);
+
+
+    @Transactional
+    @Modifying
     @Query(value = "UPDATE \"user\" SET current_manga_catalog = ? WHERE user_id = ?", nativeQuery = true)
     void setCurrentMangaCatalog(@Param("current_manga_catalog") String current_manga_catalog, @Param("user_id") Long user_id);
 
@@ -91,5 +108,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query(value = "UPDATE \"user\" SET number_of_chapters_sent = ? WHERE user_id = ?", nativeQuery = true)
     void setNumberOfChaptersSent(@Param("number_of_chapters_sent") String number_of_chapters_sent, @Param("user_id") Long user_id);
+
+    @Transactional
+    @Modifying
+    @Query(value = "UPDATE \"user\" SET private_settings = ? WHERE user_id = ?", nativeQuery = true)
+    void setPrivateSettings(@Param("private_settings") String private_settings, @Param("user_id") Long user_id);
 
 }

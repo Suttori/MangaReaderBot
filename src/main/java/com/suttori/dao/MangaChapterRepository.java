@@ -19,32 +19,44 @@ public interface MangaChapterRepository extends JpaRepository<Chapter, Long>, Cu
     @Query("SELECT new com.suttori.dto.ChapterDto(" +
             "c.id, c.messageId, c.backupMessageId, c.catalogName, c.mangaId, c.mangaDataBaseId, " +
             "c.chapterId, c.nextChapter.chapterId, c.prevChapter.chapterId, c.type, c.format, c.name, c.telegraphUrl, " +
-            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload) " +
+            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload, c.chapterName) " +
             "FROM Chapter c WHERE c.mangaId = :mangaId AND c.catalogName = :catalogName")
     List<ChapterDto> findAllByMangaIdAndCatalogName(@Param("mangaId") String mangaId, @Param("catalogName") String catalogName);
 
     @Query("SELECT new com.suttori.dto.ChapterDto(" +
             "c.id, c.messageId, c.backupMessageId, c.catalogName, c.mangaId, c.mangaDataBaseId, " +
             "c.chapterId, c.nextChapter.chapterId, c.prevChapter.chapterId, c.type, c.format, c.name, c.telegraphUrl, " +
-            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload) " +
+            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload, c.chapterName) " +
             "FROM Chapter c WHERE c.mangaId = :mangaId AND c.catalogName = :catalogName AND c.languageCode = :languageCode")
     List<ChapterDto> findAllByMangaIdAndCatalogNameAndLanguageCode(@Param("mangaId") String mangaId, @Param("catalogName") String catalogName, @Param("languageCode") String languageCode);
 
     @Query("SELECT new com.suttori.dto.ChapterDto(" +
             "c.id, c.messageId, c.backupMessageId, c.catalogName, c.mangaId, c.mangaDataBaseId, " +
             "c.chapterId, c.nextChapter.chapterId, c.prevChapter.chapterId, c.type, c.format, c.name, c.telegraphUrl, " +
-            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload) " +
+            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload, c.chapterName) " +
             "FROM Chapter c WHERE c.id = :id")
     ChapterDto findChapterDtoById(@Param("id") Long id);
 
     @Query("SELECT new com.suttori.dto.ChapterDto(" +
             "c.id, c.messageId, c.backupMessageId, c.catalogName, c.mangaId, c.mangaDataBaseId, " +
             "c.chapterId, c.nextChapter.chapterId, c.prevChapter.chapterId, c.type, c.format, c.name, c.telegraphUrl, " +
-            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload) " +
+            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload, c.chapterName) " +
             "FROM Chapter c WHERE c.chapterId = :chapterId")
     ChapterDto findChapterDtoByChapterId(@Param("chapterId") String chapterId);
 
+    @Query("SELECT new com.suttori.dto.ChapterDto(" +
+            "c.id, c.messageId, c.backupMessageId, c.catalogName, c.mangaId, c.mangaDataBaseId, " +
+            "c.chapterId, c.nextChapter.chapterId, c.prevChapter.chapterId, c.type, c.format, c.name, c.telegraphUrl, " +
+            "c.vol, c.chapter, c.status, c.addedAt, c.languageCode, c.pdfMessageId, c.telegraphMessageId, c.pdfStatusDownload, c.telegraphStatusDownload, c.chapterName) " +
+            "FROM Chapter c WHERE c.telegraphUrl IS NOT NULL")
+    List<ChapterDto> findChapterDtoByTelegraphUrlIsNotNull();
+
     Long countAllByPdfStatusDownloadOrTelegraphStatusDownload(String pdfStatus, String telegraphStatus);
+
+    @Transactional
+    @Modifying
+    @Query(value = "DELETE FROM copy_message_manga WHERE chapter_id = :chapterId", nativeQuery = true)
+    void deleteChapterById(@Param("chapterId") String chapterId);
 
     @Transactional
     @Modifying
@@ -65,6 +77,8 @@ public interface MangaChapterRepository extends JpaRepository<Chapter, Long>, Cu
     @Modifying
     @Query(value = "UPDATE copy_message_manga SET prev_chapter_id = ? WHERE chapter_id = ?", nativeQuery = true)
     void setPrevChapterByChapterId(@Param("prev_chapter_id") String prev_chapter_id, @Param("chapter_id") String chapter_id);
+
+
 
     @Transactional
     @Modifying

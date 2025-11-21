@@ -33,12 +33,17 @@ public class MessageHandler implements Handler<Update> {
     private ServiceConfig serviceConfig;
     private SortFilterDesuMeService sortFilterDesuMeService;
     private SortFilterMangaDexService sortFilterMangaDexService;
+    private RatingService ratingService;
+    private MonoPaymentService monoPaymentService;
+    private CryptoPayPaymentService cryptoPayPaymentService;
+    private ActivationTokenService activationTokenService;
 
     @Autowired
     public MessageHandler(ButtonService buttonService, UserService userService, SettingService settingService,
                           AdminService adminService, SenderService senderService, ReferralService referralService,
                           LocaleService localeService, MangaService mangaService, TelegramSender telegramSender, Util util,
-                          ProfileService profileService, ServiceConfig serviceConfig, SortFilterDesuMeService sortFilterDesuMeService, SortFilterMangaDexService sortFilterMangaDexService) {
+                          ProfileService profileService, ServiceConfig serviceConfig, SortFilterDesuMeService sortFilterDesuMeService,
+                          SortFilterMangaDexService sortFilterMangaDexService, RatingService ratingService, MonoPaymentService monoPaymentService, CryptoPayPaymentService cryptoPayPaymentService, ActivationTokenService activationTokenService) {
         this.buttonService = buttonService;
         this.userService = userService;
         this.settingService = settingService;
@@ -53,6 +58,10 @@ public class MessageHandler implements Handler<Update> {
         this.serviceConfig = serviceConfig;
         this.sortFilterDesuMeService = sortFilterDesuMeService;
         this.sortFilterMangaDexService = sortFilterMangaDexService;
+        this.ratingService = ratingService;
+        this.monoPaymentService = monoPaymentService;
+        this.cryptoPayPaymentService = cryptoPayPaymentService;
+        this.activationTokenService = activationTokenService;
     }
 
     @Override
@@ -63,6 +72,14 @@ public class MessageHandler implements Handler<Update> {
             return;
         }
         if (user == null || (message.hasText() && message.getText().contains("/start"))) {
+            if (message.getText().equals("/start paymentSuccessful")) {
+                monoPaymentService.getRequest(message);
+                return;
+            }
+            if (message.getText().contains("/start activatePass")) {
+                activationTokenService.activatePass(message);
+                return;
+            }
             userService.save(message);
             message.getFrom().setLanguageCode(userService.getLocale(message.getFrom().getId()));
             localeService.setLocale(Locale.forLanguageTag(message.getFrom().getLanguageCode()));
@@ -72,10 +89,11 @@ public class MessageHandler implements Handler<Update> {
             user.setLanguageCode(userService.getLocale(user.getUserId()));
             message.getFrom().setLanguageCode(user.getLanguageCode());
             localeService.setLocale(Locale.forLanguageTag(user.getLanguageCode()));
+            userService.upsertUser(message);
         }
 
         if (user.getPosition() == null) {
-            userService.setPositionAndMessageId(user.getUserId(), "DEFAULT_POSITION");
+            userService.setPosition(user.getUserId(), "DEFAULT_POSITION");
         }
 
         if (message.hasText()) {
@@ -86,13 +104,10 @@ public class MessageHandler implements Handler<Update> {
             try {
                 switch (message.getText()) {
                     case "Поиск":
+                    case "Поиск/Каталог":
                         if (referralService.checkAccess(message)) {
-                            mangaService.clickSearch(message);
-                        }
-                        return;
-                    case "Случайная манга":
-                        if (referralService.checkAccess(message)) {
-                            serviceConfig.mangaServices().get(user.getCurrentMangaCatalog()).getRandomManga(message.getFrom().getId());
+                            userService.setPosition(user.getUserId(), "DEFAULT_POSITION");
+                            mangaService.clickSearch(message, user.getCurrentMangaCatalog());
                         }
                         return;
                     case "Профиль":
@@ -107,10 +122,22 @@ public class MessageHandler implements Handler<Update> {
                         return;
                     case "Главное меню":
                         if (referralService.checkAccess(message)) {
-                            userService.setPositionAndMessageId(user.getUserId(), "DEFAULT_POSITION");
+                            userService.setPosition(user.getUserId(), "DEFAULT_POSITION");
                             buttonService.generateMainButtonsWithGreetings(message.getFrom().getId(), message.getText());
                         }
                         return;
+                    case "Рейтинг читателей":
+                        if (referralService.checkAccess(message)) {
+                            userService.setPosition(user.getUserId(), "DEFAULT_POSITION");
+                            ratingService.clickReadersRating(message.getFrom().getId());
+                        }
+                        return;
+                }
+
+
+                if (user.getPosition().equals("WAIT_FOR_DONATE_SUM")) {
+                    cryptoPayPaymentService.getSumForDonate(message);
+                    return;
                 }
 
                 if (message.getText().contains("\nsetSortParam\n")) {
@@ -263,8 +290,20 @@ public class MessageHandler implements Handler<Update> {
                 } else if (message.getText().equals("Стата по активности")) {
                     adminService.getLastActivity(message);
                     return;
+                } else if (message.getText().equals("Стата по активностиУ")) {
+                    adminService.getLastActivityUnique(message);
+                    return;
+                } else if (message.getText().equals("Безоз пидарас")) {
+                    adminService.updateUrlForAllObjects();
+                    return;
                 } else if (message.getText().equals("Стата по загрузкам")) {
                     adminService.getStatAboutDownloadChapters(message);
+                    return;
+                } else if (message.getText().equals("Стата по загрузкам файлов")) {
+                    adminService.getStatAboutFileDownloadChapters(message);
+                    return;
+                } else if (message.getText().equals("Стата по загрузкам файлов7")) {
+                    adminService.getStatAboutFileDownloadChaptersForLastWeek(message);
                     return;
                 } else if ((message.getText().equals("Админ панель") || message.getText().equals("Адмін панель") || message.getText().equals("Admin Panel"))) {
                     adminService.createAdminPanel(message);

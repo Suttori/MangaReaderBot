@@ -13,5 +13,6 @@ public class ChapterMangaDex {
     private String id;
     private List<String> others;
     private int count;
+    private Boolean isUnavailable;
 
 }

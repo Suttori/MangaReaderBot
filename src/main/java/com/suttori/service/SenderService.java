@@ -240,7 +240,7 @@ public class SenderService {
                 .messageId(callbackQuery.getMessage().getMessageId())
                 .chatId(callbackQuery.getFrom().getId()).build());
 
-        List<User> users = userRepository.findAllByIsPremiumBotUserIsNull();
+        List<User> users = userRepository.findAll();
         List<User> userList = telegramSender.prepareSendAdsThread(users, (Message) callbackQuery.getMessage());
 
         long endTime = System.nanoTime();

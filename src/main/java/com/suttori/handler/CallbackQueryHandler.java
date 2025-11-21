@@ -29,12 +29,15 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
     private ProfileService profileService;
     private ServiceConfig serviceConfig;
     private TelegramSender telegramSender;
-    private SortFilterDesuMeService sortFilterDesuMeService;
+    private RatingService ratingService;
+    private MonoPaymentService monoPaymentService;
+    private CryptoPayPaymentService cryptoPayPaymentService;
 
     @Autowired
-    public CallbackQueryHandler(UserService userService, SettingService settingService,
-                                AdminService adminService, SenderService senderService,
-                                Util util, LocaleService localeService, MangaService mangaService, ProfileService profileService, ServiceConfig serviceConfig, TelegramSender telegramSender, SortFilterDesuMeService sortFilterDesuMeService) {
+    public CallbackQueryHandler(UserService userService, SettingService settingService, AdminService adminService,
+                                SenderService senderService, Util util, LocaleService localeService, MangaService mangaService,
+                                ProfileService profileService, ServiceConfig serviceConfig, TelegramSender telegramSender,
+                                RatingService ratingService, MonoPaymentService monoPaymentService, CryptoPayPaymentService cryptoPayPaymentService) {
         this.userService = userService;
         this.settingService = settingService;
         this.adminService = adminService;
@@ -45,7 +48,9 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
         this.profileService = profileService;
         this.serviceConfig = serviceConfig;
         this.telegramSender = telegramSender;
-        this.sortFilterDesuMeService = sortFilterDesuMeService;
+        this.ratingService = ratingService;
+        this.monoPaymentService = monoPaymentService;
+        this.cryptoPayPaymentService = cryptoPayPaymentService;
     }
 
     @Override
@@ -86,6 +91,19 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
                 case "changeNumberOfChaptersSent":
                     settingService.clickChangeNumberOfChaptersSent(callbackQuery);
                     return;
+                case "getStatAboutDailyDownloadChapters":
+                case "getStatAboutAllTimeDownloadChapters":
+                    ratingService.getRatingAboutChapterDownload(callbackQuery);
+                    return;
+                case "getRandomManga":
+                    userService.setPosition(user.getUserId(), "DEFAULT_POSITION");
+                    serviceConfig.mangaServices().get(user.getCurrentMangaCatalog()).getRandomManga(callbackQuery.getFrom().getId());
+                    return;
+                case "clickDonateCryptoPay":
+                    cryptoPayPaymentService.clickDonateCryptoPay(callbackQuery);
+                    return;
+
+
             }
 
             if (callbackQuery.getData().contains("prevChapter\n") || callbackQuery.getData().contains("nextChapter\n")) {
@@ -125,6 +143,11 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
 
             if (callbackQuery.getData().contains("chooseCatalog\nmangadex.org")) {
                 mangaService.chooseMangaDexCatalog(callbackQuery);
+                return;
+            }
+
+            if (callbackQuery.getData().contains("cancelSetLanguageCode")) {
+                mangaService.clickChooseCatalog(callbackQuery);
                 return;
             }
 
@@ -174,7 +197,7 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
             }
 
             if (callbackQuery.getData().equals("backToSearch")) {
-                mangaService.clickSearch(callbackQuery);
+                mangaService.clickSearch(callbackQuery, user.getCurrentMangaCatalog());
                 return;
             }
 
@@ -182,6 +205,21 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
                 settingService.setLocale(callbackQuery);
                 return;
             }
+
+            if (callbackQuery.getData().contains("subscription_activation\n")) {
+                monoPaymentService.clickActivationSubscribe(callbackQuery);
+                return;
+            }
+
+            if (callbackQuery.getData().contains("payViaCryptoPay\n")) {
+                cryptoPayPaymentService.chooseSumForPay(callbackQuery);
+                return;
+            }
+
+
+
+
+
 
             if (adminService.isAdmin(callbackQuery.getFrom().getId())) {
                 switch (callbackQuery.getData()) {
@@ -224,6 +262,12 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
                         return;
                     case "clickGetInfoAboutUser":
                         adminService.clickGetInfoAboutUser(callbackQuery);
+                        return;
+                    case "clickPrivateSetting":
+                        profileService.privateSettings(callbackQuery, user);
+                        return;
+                    case "setPrivateSettings":
+                        profileService.clickSetPrivateSettings(callbackQuery, user);
                         return;
                 }
 

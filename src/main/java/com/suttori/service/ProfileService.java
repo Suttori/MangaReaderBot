@@ -63,7 +63,7 @@ public class ProfileService {
 
     public void clickProfile(Message message) {
         mangaUtil.checkDuplicateMangaStatusParameter(message.getFrom().getId());
-
+        userRepository.setPosition("DEFAULT_POSITION", message.getFrom().getId());
         telegramSender.sendPhoto(SendPhoto.builder()
                 .photo(new InputFile(getPhotoFieldId(message.getFrom().getId(), "AgACAgIAAxkBAAIHS2XPgbBhPyaF8R5oxtmOPPXHPLvTAAKY4jEbIRZ4Sv0mR_QE3jErAQADAgADcwADNAQ")))
                 .caption(getTextForUserProfile(message.getFrom().getId()))
@@ -71,7 +71,8 @@ public class ProfileService {
                 .replyMarkup(new InlineKeyboardMarkup(new ArrayList<>(List.of(
                         new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("История")).switchInlineQueryCurrentChat("history").build(),
                                 InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Друзья")).callbackData("clickMyFriend\n" + 1).build()),
-                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Чат обсуждения")).url("https://t.me/manga_reader_chat").build()),
+                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Приватность")).callbackData("clickPrivateSetting").build(),
+                                InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Чат обсуждения")).url("https://t.me/manga_reader_chat").build()),
                         new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Мои закладки")).callbackData("clickMyFavorites").build())))))
                 .parseMode("HTML").build());
     }
@@ -88,10 +89,47 @@ public class ProfileService {
                 .replyMarkup(new InlineKeyboardMarkup(new ArrayList<>(List.of(
                         new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("История")).switchInlineQueryCurrentChat("history").build(),
                                 InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Друзья")).callbackData("clickMyFriend\n" + 1).build()),
-                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Чат обсуждения")).url("https://t.me/manga_reader_chat").build()),
+                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Приватность")).callbackData("clickPrivateSetting").build(),
+                                InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Чат обсуждения")).url("https://t.me/manga_reader_chat").build()),
                         new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Мои закладки")).callbackData("clickMyFavorites").build())))))
                 .chatId(callbackQuery.getFrom().getId())
                 .parseMode("HTML").build());
+    }
+
+    public void privateSettings(CallbackQuery callbackQuery, User user) {
+        String privateSettingsText;
+        String privateSettingsButtonText;
+        if (user.getPrivateSettings() == null || user.getPrivateSettings().equals("ALL")) {
+            privateSettingsText = "Сейчас твой профиль виден (если у тебя есть @юзернейм в телеграм)";
+            privateSettingsButtonText = "Закрыть профиль";
+        } else {
+            privateSettingsText = "Сейчас твой профиль закрыт и отображается только твое имя";
+            privateSettingsButtonText = "Открыть профиль";
+        }
+
+        telegramSender.sendEditMessageCaption(EditMessageCaption.builder()
+                .caption("Здесь ты можешь изменить настройки приватности в боте. \n\nСсылку на твой аккаунт в телеграм могут увидеть в статистике бота, он будет кликабельным как " + user.getFirstName() + (user.getLastName() != null ? user.getLastName() : "") + ". Если отключить эту функцию, то в статистиках будет отображаться только твое имя. Если у тебя нет @юзернейм в телеграм, то в любом случае будет отображаться только твое имя. Эти настройки не касаются тех, кого ты добавил в друзья.\n\n" + privateSettingsText)
+                .messageId(callbackQuery.getMessage().getMessageId())
+                .replyMarkup(new InlineKeyboardMarkup(new ArrayList<>(List.of(
+                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode(privateSettingsButtonText)).callbackData("setPrivateSettings").build()),
+                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Назад")).callbackData("clickBackToProfile").build())))))
+                .chatId(callbackQuery.getFrom().getId())
+                .captionEntity(MessageEntity.builder()
+                        .length((user.getFirstName() + (user.getLastName() != null ? user.getLastName() : "")).length())
+                        .url("tg://settings")
+                        .offset(150)
+                        .type("text_link").build()).build());
+    }
+
+    public void clickSetPrivateSettings(CallbackQuery callbackQuery, User user) {
+        if (user.getPrivateSettings() == null || user.getPrivateSettings().equals("ALL")) {
+            user.setPrivateSettings("RESTRICT");
+            userRepository.setPrivateSettings("RESTRICT", user.getUserId());
+        } else {
+            user.setPrivateSettings("ALL");
+            userRepository.setPrivateSettings("ALL", user.getUserId());
+        }
+        privateSettings(callbackQuery, user);
     }
 
     public String getTextForUserProfile(Long userId) {

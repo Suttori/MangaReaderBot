@@ -45,6 +45,7 @@ public class Constants {
         genreParamDesuMe.put("Игры", "Game");
         genreParamDesuMe.put("Исекай", "Isekai");
         genreParamDesuMe.put("Исторический", "Historical");
+        //genreParamDesuMe.put("Комедия", "Comedy");
         genreParamDesuMe.put("Космос", "Space");
         genreParamDesuMe.put("ЛитRPG", "LitRPG");
         genreParamDesuMe.put("Магия", "Magic");
@@ -58,13 +59,14 @@ public class Constants {
         genreParamDesuMe.put("Приключения", "Adventure");
         genreParamDesuMe.put("Психологическое", "Psychological");
         genreParamDesuMe.put("Романтика", "Romance");
+        //genreParamDesuMe.put("Самураи", "Samurai");
         genreParamDesuMe.put("Сверхъестественное", "Supernatural");
         genreParamDesuMe.put("Сёдзе", "Shoujo");
-        genreParamDesuMe.put("Сёдзе ай", "Shoujo_Ai");
+        genreParamDesuMe.put("Сёдзе ай", "Shoujo_Ai"); //удалено
         genreParamDesuMe.put("Сейнен", "Seinen");
         genreParamDesuMe.put("Сёнен", "Shounen");
-        genreParamDesuMe.put("Сёнен ай", "Shounen_Ai");
-        genreParamDesuMe.put("Смена пола", "Gender_Bender");
+        genreParamDesuMe.put("Сёнен ай", "Shounen_Ai"); //удалено
+        genreParamDesuMe.put("Смена пола", "Gender_Bender"); //удалено
         genreParamDesuMe.put("Спорт", "Sports");
         genreParamDesuMe.put("Супер сила", "Super_Power");
         genreParamDesuMe.put("Трагедия", "Tragedy");
@@ -76,8 +78,8 @@ public class Constants {
         genreParamDesuMe.put("Школа", "School");
         genreParamDesuMe.put("Экшен", "Action");
         genreParamDesuMe.put("Этти", "Ecchi");
-        genreParamDesuMe.put("Юри", "Yuri");
-        genreParamDesuMe.put("Яой", "Yaoi");
+        genreParamDesuMe.put("Юри", "Yuri"); //удалено
+        genreParamDesuMe.put("Яой", "Yaoi"); //удалено
         GENRE_PARAM_DESU_ME = Collections.unmodifiableMap(genreParamDesuMe);
     }
 

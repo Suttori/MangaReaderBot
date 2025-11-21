@@ -35,5 +35,7 @@ public class ChapterDto {
     private Integer telegraphMessageId;
     private String pdfStatusDownload;
     private String telegraphStatusDownload;
+    private String chapterName;
+
 
 }

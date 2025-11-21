@@ -221,14 +221,18 @@ public class SettingService {
     }
 
     public void clickDonate(CallbackQuery callbackQuery) {
+        userService.setPosition(callbackQuery.getFrom().getId(), "DEFAULT_POSITION");
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup(new ArrayList<>(List.of(
-                new InlineKeyboardRow(InlineKeyboardButton.builder().text(localeService.getBundle("back")).callbackData("backToSettings").build())
+                new InlineKeyboardRow(InlineKeyboardButton.builder().text("Crypto Pay (USDT)").callbackData("clickDonateCryptoPay").build()),
+               // new InlineKeyboardRow(InlineKeyboardButton.builder().text("Monobank").callbackData("clickDonateMono").build()),
+                new InlineKeyboardRow(InlineKeyboardButton.builder().text("Назад").callbackData("backToSettings").build())
         )));
 
         telegramSender.sendEditMessageText(EditMessageText.builder()
-                .text("Если тебе нравится бот и ты хочешь поддержать его развитие и работу, то можешь сделать это по сслылкам: \nhttps://ko-fi.com/mangareaderbot\nhttps://patreon.com/mangareaderbot\n\n или лично @Suttori\n\nВсем кто поддержал бот финансово от 2$ доступна функция загрузки до 10 глав одним сообщением. Спасибо за поддержку ❤\uFE0F")
+                .text("Если тебе нравится бот и ты хочешь поддержать его развитие и работу, то можешь сделать это по кнопкам ниже или лично @Suttori\n\nЗа донат от 3$ тебе станет доступна функция загрузки нескольких глав одновременно\n\nСпасибо за поддержку ❤\uFE0F")
                 .messageId(callbackQuery.getMessage().getMessageId())
                 .replyMarkup(inlineKeyboardMarkup)
+                .disableWebPagePreview(true)
                 .disableWebPagePreview(true)
                 .chatId(callbackQuery.getMessage().getChatId()).build());
     }

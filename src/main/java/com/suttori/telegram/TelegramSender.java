@@ -116,7 +116,7 @@ public class TelegramSender {
         try {
             return telegramClient.executeAsync(sendPhoto).get();
         } catch (InterruptedException | ExecutionException e) {
-            logger.error("sendPhoto " + sendPhoto.getChatId(), e);
+            logger.error("sendPhoto " + sendPhoto.getChatId());
             throw new RuntimeException(e);
         }
     }
@@ -131,12 +131,13 @@ public class TelegramSender {
         }
     }
 
-    public void sendEditMessageCaption(EditMessageCaption editMessageCaption) {
+    public Message sendEditMessageCaption(EditMessageCaption editMessageCaption) {
         logger.info("sendEditMessageCaption " + editMessageCaption.getChatId());
         try {
-            telegramClient.executeAsync(editMessageCaption).get();
+            return (Message) telegramClient.executeAsync(editMessageCaption).get();
         } catch (TelegramApiException | InterruptedException | ExecutionException e) {
             logger.error("Failed sendEditMessageCaption " + editMessageCaption.getChatId(), e);
+            return null;
         }
     }
 

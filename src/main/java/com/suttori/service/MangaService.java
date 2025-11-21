@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.*;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.*;
@@ -73,6 +74,9 @@ public class MangaService {
         this.readStatusRepository = readStatusRepository;
         this.mangaRepository = mangaRepository;
     }
+
+    private static final String DOWNLOAD_STATUS_TEXT = "Твоя глава уже загружается, обычно это занимает не больше минуты, спасибо за ожидание\n\nВ боте предусмотрена автоматическая предзагрузка глав, поэтому пока ты будешь читать текующую главу, следующая уже будет загружена";
+
 
     private static final Map<String, Map<String, String>> LANGUAGE_CODE = new LinkedHashMap<>();
 
@@ -135,30 +139,32 @@ public class MangaService {
         return map;
     }
 
-    public void clickSearch(Message message) {
+    public void clickSearch(Message message, String catalog) {
         telegramSender.send(SendMessage.builder()
-                .text("Нажми на кнопки чтобы начать искать или открыть общий каталог\n\nИнструкция по поиску: @searchInstructions")
+                .text("Нажми на кнопку <b>\"Искать мангу/Открыть каталог\"</b>, чтобы открыть каталог. Для поиска просто начни вводить название манги после того как нажмешь на кнопку.\n\nЧтобы изменить каталог нажми на <b>\"Изменить каталог\"</b>.\n\nТекущий каталог: " + catalog + "\n\nИнструкция: @searchInstructions")
                 .chatId(message.getFrom().getId())
-                .replyMarkup(new InlineKeyboardMarkup(new ArrayList<>(List.of(
-                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Выбрать каталог")).callbackData("clickChooseCatalog").build()),
+                .parseMode("HTML")
+                .replyMarkup(new InlineKeyboardMarkup(new ArrayList<>(List.of(catalog.equals("desu.me") ?
+                                new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Случайная манга")).callbackData("getRandomManga").build(),
+                                        InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Изменить каталог")).callbackData("clickChooseCatalog").build()) :
+                                new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Изменить каталог")).callbackData("clickChooseCatalog").build()),
                         new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Сортировка и фильтры")).callbackData("clickSetSortFilterParams").build()),
-                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Поиск")).switchInlineQueryCurrentChat("").build())
-                        //InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Поиск по хештегам")).switchInlineQueryCurrentChat("hashtag\n").build()),
-//                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Последние обновления")).switchInlineQueryCurrentChat("last updated").build())
+                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Искать мангу/Открыть каталог")).switchInlineQueryCurrentChat("").build())
                 )))).build());
     }
 
-    public void clickSearch(CallbackQuery callbackQuery) {
+    public void clickSearch(CallbackQuery callbackQuery, String catalog) {
         telegramSender.sendEditMessageText(EditMessageText.builder()
-                .text("Нажми на кнопки чтобы начать искать или открыть общий каталог\n\nИнструкция по поиску: @searchInstructions")
+                .text("Нажми на кнопку <b>\"Искать мангу/Открыть каталог\"</b>, чтобы открыть каталог. Для поиска просто начни вводить название манги после того как нажмешь на кнопку.\n\nЧтобы изменить каталог нажми на <b>\"Изменить каталог\"</b>.\n\nТекущий каталог: " + catalog + "\n\nИнструкция: @searchInstructions")
                 .chatId(callbackQuery.getFrom().getId())
                 .messageId(callbackQuery.getMessage().getMessageId())
-                .replyMarkup(new InlineKeyboardMarkup(new ArrayList<>(List.of(
-                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Выбрать каталог")).callbackData("clickChooseCatalog").build()),
+                .parseMode("HTML")
+                .replyMarkup(new InlineKeyboardMarkup(new ArrayList<>(List.of(catalog.equals("desu.me") ?
+                                new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Случайная манга")).callbackData("getRandomManga").build(),
+                                        InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Изменить каталог")).callbackData("clickChooseCatalog").build()) :
+                                new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Изменить каталог")).callbackData("clickChooseCatalog").build()),
                         new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Сортировка и фильтры")).callbackData("clickSetSortFilterParams").build()),
-                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Поиск")).switchInlineQueryCurrentChat("").build())
-                        //InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Поиск по хештегам")).switchInlineQueryCurrentChat("hashtag\n").build()),
-                        //new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Последние обновления")).switchInlineQueryCurrentChat("last updated").build())
+                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Искать мангу/Открыть каталог")).switchInlineQueryCurrentChat("").build())
                 )))).build());
     }
 
@@ -172,7 +178,8 @@ public class MangaService {
                         //new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Honey-manga.com.ua")).callbackData("chooseCatalog\nhoney-manga.com.ua").build()),
                         new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("MangaDex.org")).callbackData("chooseCatalog\nmangadex.org").build()),
                         //new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("ReadManga.live")).callbackData("chooseCatalog\nreadmanga.live").build(),
-                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Desu.me")).callbackData("chooseCatalog\ndesu.me").build())
+                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Desu.me")).callbackData("chooseCatalog\ndesu.me").build()),
+                        new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Назад")).callbackData("backToSearch").build())
                 ))))
                 .entities(getEntitiesChooseCatalog(text))
                 .disableWebPagePreview(true)
@@ -214,7 +221,7 @@ public class MangaService {
             util.sendErrorMessage("Произошла ошибка при выборе каталога, лучше обратиться в поддержку", callbackQuery.getFrom().getId());
             return;
         }
-        clickSearch(callbackQuery);
+        clickSearch(callbackQuery, catalog);
         telegramSender.sendAnswerCallbackQuery(AnswerCallbackQuery.builder()
                 .showAlert(false)
                 .text(text)
@@ -230,7 +237,8 @@ public class MangaService {
                     .chatId(callbackQuery.getFrom().getId())
                     .messageId(callbackQuery.getMessage().getMessageId())
                     .replyMarkup(new InlineKeyboardMarkup(new ArrayList<>(List.of(
-                            new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Выбрать язык")).switchInlineQueryCurrentChat("SetLanguageCode").build())
+                            new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Выбрать язык")).switchInlineQueryCurrentChat("SetLanguageCode").build()),
+                            new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Отмена")).callbackData("cancelSetLanguageCode").build())
                     )))).build());
         } else {
             telegramSender.send(SendMessage.builder()
@@ -271,7 +279,7 @@ public class MangaService {
                     userRepository.setCurrentLanguageCodeForCatalog(languageCode, message.getFrom().getId());
                     util.deleteMessageByMessageId(message.getFrom().getId(), message.getMessageId());
                     util.sendInfoMessage("Язык был успешно выбран, можешь вернутся к поиску", message.getFrom().getId());
-                    clickSearch(message);
+                    clickSearch(message, "mangadex.org");
                     return;
                 }
             }
@@ -332,7 +340,7 @@ public class MangaService {
         User user = userRepository.findByUserId(userId);
 
         if (user.getIsPremiumBotUser() == null || !user.getIsPremiumBotUser()) {
-            util.sendErrorMessage("Что-то не так с твоей подпиской. Попробуй еще раз и, если ошибка повторится, то обратись в поддержку", callbackQuery.getFrom().getId());
+            util.sendErrorMessage("Что-то не так с твоим доступом. Попробуй еще раз и, если ошибка повторится, то обратись в поддержку", callbackQuery.getFrom().getId());
             return;
         }
         List<Chapter> chapters = new ArrayList<>();
@@ -384,14 +392,14 @@ public class MangaService {
         sendChaptersPack(chapters, user);
     }
 
-    public Integer sendDownloadStatus(boolean flagEditMessageText, Integer tempDownloadMessageId, Chapter chapter, Long userId) {
+    public Integer sendDownloadStatus(boolean flagEditMessageText, Integer tempDownloadMessageId, String text, Long userId) {
         if (flagEditMessageText) {
             return telegramSender.send(SendMessage.builder()
                     .chatId(userId)
-                    .text("Загружаю том " + chapter.getVol() + " главу " + chapter.getChapter() + "...").build()).getMessageId();
+                    .text(text).build()).getMessageId();
         } else {
             return telegramSender.sendEditMessageTextAsync(EditMessageText.builder()
-                    .text("Загружаю том " + chapter.getVol() + " главу " + chapter.getChapter() + "...")
+                    .text(text)
                     .messageId(tempDownloadMessageId)
                     .chatId(userId).build()).getMessageId();
         }
@@ -406,7 +414,7 @@ public class MangaService {
         boolean flagEditMessageText = true;
 
         for (Chapter chapter : chapters) {
-            if ((user.getMangaFormatParameter() == null && (mangaUtil.isNotLongStripMangaDex(chapter) || mangaUtil.isMangaDesuMe(chapter))) || (user.getMangaFormatParameter() != null && user.getMangaFormatParameter().equals("telegraph"))) {
+            if ((user.getMangaFormatParameter() == null && (mangaUtil.isNotLongStripMangaDex(chapter) || mangaUtil.isMangaDesuMe(chapter) || mangaUtil.isNotWebUsagi(chapter))) || (user.getMangaFormatParameter() != null && user.getMangaFormatParameter().equals("telegraph"))) {
                 if (chapter.getTelegraphStatusDownload() != null && chapter.getTelegraphStatusDownload().equals("finished")) {
                     String chapterSting = "\n" + chapter.getName() + " Том " + chapter.getVol() + ". Глава " + chapter.getChapter();
                     messageEntities.add(MessageEntity.builder()
@@ -416,10 +424,9 @@ public class MangaService {
                             .url(chapter.getTelegraphUrl()).build());
                     textTelegraphArticleChapters.append(chapterSting);
                 } else {
-                    tempDownloadMessageId = sendDownloadStatus(flagEditMessageText, tempDownloadMessageId, chapter, user.getUserId());
+                    tempDownloadMessageId = sendDownloadStatus(flagEditMessageText, tempDownloadMessageId, "Загружаю том " + chapter.getVol() + " главу " + chapter.getChapter() + "...", user.getUserId());
                     flagEditMessageText = false;
-
-                    Integer chapterMessageId = serviceConfig.mangaServices().get(chapter.getCatalogName()).createTelegraphArticleChapter(user.getUserId(), chapter);
+                    Integer chapterMessageId = serviceConfig.mangaServices().get(chapter.getCatalogName()).createTelegraphArticleChapter(user.getUserId(), chapter, null);
                     if (chapterMessageId == null) {
                         log.error("chapterMessageId null");
                         continue;
@@ -489,7 +496,9 @@ public class MangaService {
                     .entities(messageEntities)
                     .replyMarkup(serviceConfig.mangaServices().get(lastChapter.getCatalogName()).getPrevNextButtons(lastChapter, user.getUserId()))
                     .chatId(user.getUserId()).build());
-            telegramSender.deleteMessageById(String.valueOf(user.getUserId()), tempDownloadMessageId);
+            if (tempDownloadMessageId != null) {
+                telegramSender.deleteMessageById(String.valueOf(user.getUserId()), tempDownloadMessageId);
+            }
         } else {
             if (!messageIds.isEmpty()) {
                 messageIds.sort(Comparator.naturalOrder());
@@ -502,10 +511,7 @@ public class MangaService {
                     .text("Навигация")
                     .replyMarkup(serviceConfig.mangaServices().get(lastChapter.getCatalogName()).getPrevNextButtons(lastChapter, user.getUserId()))
                     .chatId(user.getUserId()).build());
-
         }
-
-
     }
 
     public void writeHistory(Chapter chapter, Long userId, String catalogName) {
@@ -528,14 +534,11 @@ public class MangaService {
     public void getChapterHandler(Chapter chapter, Long userId) {
         User user = userRepository.findByUserId(userId);
         MangaServiceInterface service = serviceConfig.mangaServices().get(chapter.getCatalogName());
-
-//        if (user.getMangaFormatParameter() != null && user.getMangaFormatParameter().equals("cbz")) {
-//            Integer messageIdChapterInStorage = service.createCbzChapter(userId, chapter);
-//            sendChapterToUser(messageIdChapterInStorage, chapter, userId);
-//        } else
-        if ((user.getMangaFormatParameter() == null && (mangaUtil.isNotLongStripMangaDex(chapter) || mangaUtil.isMangaDesuMe(chapter))) || (user.getMangaFormatParameter() != null && user.getMangaFormatParameter().equals("telegraph"))) {
+        if ((user.getMangaFormatParameter() == null && (mangaUtil.isNotLongStripMangaDex(chapter) || mangaUtil.isMangaDesuMe(chapter) || mangaUtil.isNotWebUsagi(chapter))) || (user.getMangaFormatParameter() != null && user.getMangaFormatParameter().equals("telegraph"))) {
             if (chapter.getTelegraphStatusDownload() != null && chapter.getTelegraphStatusDownload().equals("process")) {
+                Integer tempMessageId = mangaUtil.sendWaitGIFAndAction(userId, DOWNLOAD_STATUS_TEXT);
                 waitForUploadManga(userId, chapter);
+                telegramSender.deleteMessageById(String.valueOf(userId), tempMessageId);
                 executorService.submit(() ->
                         service.preloadMangaChapter(userId, chapter)
                 );
@@ -547,8 +550,11 @@ public class MangaService {
                 );
             } else {
                 executorService.submit(() -> {
-                            Integer messageIdChapterInStorage = service.createTelegraphArticleChapter(userId, chapter);
+                            Integer tempMessageId = mangaUtil.sendWaitGIFAndAction(userId, DOWNLOAD_STATUS_TEXT);
+                            EditMessageCaption editMessageCaption = EditMessageCaption.builder().caption(DOWNLOAD_STATUS_TEXT).messageId(tempMessageId).chatId(userId).build();
+                            Integer messageIdChapterInStorage = service.createTelegraphArticleChapter(userId, chapter, editMessageCaption);
                             sendChapterToUser(messageIdChapterInStorage, chapter, userId);
+                            telegramSender.deleteMessageById(String.valueOf(userId), tempMessageId);
                         }
                 );
             }
@@ -557,7 +563,7 @@ public class MangaService {
             );
         } else {
             if (chapter.getPdfStatusDownload() != null && chapter.getPdfStatusDownload().equals("process")) {
-                Integer messageIdForDelete = mangaUtil.sendWaitGIFAndAction(userId);
+                Integer messageIdForDelete = mangaUtil.sendWaitGIFAndAction(userId, DOWNLOAD_STATUS_TEXT);
                 waitForUploadManhwa(userId, chapter);
                 telegramSender.deleteMessageById(String.valueOf(userId), messageIdForDelete);
                 executorService.submit(() ->
@@ -571,12 +577,11 @@ public class MangaService {
                 );
             } else {
                 executorService.submit(() -> {
-                            Integer messageIdForDelete = mangaUtil.sendWaitGIFAndAction(userId);
+                            Integer messageIdForDelete = mangaUtil.sendWaitGIFAndAction(userId, DOWNLOAD_STATUS_TEXT);
                             Integer messageIdChapterInStorage = service.createPdfChapter(userId, chapter);
                             sendChapterToUser(messageIdChapterInStorage, chapter, userId);
                             telegramSender.deleteMessageById(String.valueOf(userId), messageIdForDelete);
                         }
-
                 );
             }
             executorService.submit(() ->
@@ -613,7 +618,7 @@ public class MangaService {
     }
 
     public void waitForUploadManga(Long userId, Chapter chapter) {
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 60; i++) {
             try {
                 Thread.sleep(1000);
                 ChapterDto chapterDto = mangaChapterRepository.findChapterDtoById(chapter.getId());
@@ -633,7 +638,8 @@ public class MangaService {
         //chapter = mangaChapterRepository.findById(chapter.getId()).get();
         if (chapter.getTelegraphStatusDownload().equals("process")) {
             mangaChapterRepository.setTelegraphStatusDownload(null, chapter.getId());
-            serviceConfig.mangaServices().get(chapter.getCatalogName()).createTelegraphArticleChapter(userId, chapter);
+            Integer messageIdChapterInStorage = serviceConfig.mangaServices().get(chapter.getCatalogName()).createTelegraphArticleChapter(userId, chapter, null);
+            sendChapterToUser(messageIdChapterInStorage, chapter, userId);
         } else if (chapter.getTelegraphStatusDownload().equals("finished")) {
             sendCopyMessageMangaFromMangaStorage(userId, chapter);
         }
@@ -652,7 +658,7 @@ public class MangaService {
             mangaChapterRepository.setTelegraphStatusDownload(null, chapter.getId());
             log.error("Copy message not send: " + chapter.getName() + " chapterId " + chapter.getChapterId() + " vol " + chapter.getVol() + " ch " + chapter.getChapter());
             e.printStackTrace();
-            serviceConfig.mangaServices().get(chapter.getCatalogName()).createTelegraphArticleChapter(userId, chapter);
+            serviceConfig.mangaServices().get(chapter.getCatalogName()).createTelegraphArticleChapter(userId, chapter, null);
         }
     }
 

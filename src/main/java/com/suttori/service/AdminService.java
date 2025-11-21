@@ -1,10 +1,19 @@
 package com.suttori.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.suttori.dao.*;
+import com.suttori.dto.ChapterDto;
+import com.suttori.dto.UserFileSizeDto;
 import com.suttori.entity.*;
+import com.suttori.entity.MangaDesu.ErrorResponse;
+import com.suttori.entity.MangaDesu.Page;
+import com.suttori.entity.MangaDesu.PageResponse;
 import com.suttori.telegram.TelegramSender;
+import com.suttori.telegram.TelegraphApiFeignClient;
 import com.suttori.util.Util;
 import com.vdurmont.emoji.EmojiParser;
+import feign.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.pinnedmessages.PinChatMessage;
@@ -15,17 +24,23 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageRe
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegraph.api.methods.EditPage;
+import org.telegram.telegraph.api.methods.GetPage;
+import org.telegram.telegraph.api.objects.Node;
+import org.telegram.telegraph.api.objects.NodeElement;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -53,6 +68,9 @@ public class AdminService {
     private MessageEntitiesRepository messageEntitiesRepository;
     private LastActivityRepository lastActivityRepository;
 
+    private TelegraphApiFeignClient telegraphApiFeignClient;
+    private AwsUrlRepository awsUrlRepository;
+
     @Autowired
     public AdminService(TelegramSender telegramSender, MessageService messageService, Util util,
                         StatisticEntityRepository statisticEntityRepository, MangaChapterRepository mangaChapterRepository,
@@ -60,7 +78,7 @@ public class AdminService {
                         ReferralLinkRepository referralLinkRepository, AdvertiserRepository advertiserRepository,
                         PostToDeleteRepository postToDeleteRepository, PostRepositoryInterface postRepositoryInterface,
                         MediaGroupRepository mediaGroupRepository, MessageEntitiesRepository messageEntitiesRepository,
-                        LastActivityRepository lastActivityRepository) {
+                        LastActivityRepository lastActivityRepository, TelegraphApiFeignClient telegraphApiFeignClient, AwsUrlRepository awsUrlRepository) {
         this.telegramSender = telegramSender;
         this.messageService = messageService;
         this.util = util;
@@ -75,6 +93,8 @@ public class AdminService {
         this.mediaGroupRepository = mediaGroupRepository;
         this.messageEntitiesRepository = messageEntitiesRepository;
         this.lastActivityRepository = lastActivityRepository;
+        this.telegraphApiFeignClient = telegraphApiFeignClient;
+        this.awsUrlRepository = awsUrlRepository;
     }
 
     public boolean isAdvertiser(Long userId) {
@@ -763,6 +783,16 @@ public class AdminService {
                 .chatId(message.getFrom().getId()).build());
     }
 
+    public void getLastActivityUnique(Message message) {
+        List<User> users = userRepository.findAllByLastActivityAfter(new Timestamp(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1)));
+        List<User> userFilterListDay = users.stream().filter(user -> user.getRegisterTime().before(new Timestamp(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1)))).toList();
+        List<User> userFilterListThreeDays = users.stream().filter(user -> user.getRegisterTime().before(new Timestamp(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(3)))).toList();
+        List<User> userFilterListWeek = users.stream().filter(user -> user.getRegisterTime().before(new Timestamp(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7)))).toList();
+        telegramSender.send(SendMessage.builder()
+                .text("Пользователей за сутки: " + users.size() + "\nЗарегистрированы больше 1 дня: " + userFilterListDay.size() + "\nЗарегистрированы больше 3 дней: " + userFilterListThreeDays.size() + "\nЗарегистрированы больше недели: " + userFilterListWeek.size())
+                .chatId(message.getFrom().getId()).build());
+    }
+
     public void getStatAboutDownloadChapters(Message message) {
         List<Object[]> results = statisticEntityRepository.findUserChapterStatistics();
         int i = 0;
@@ -785,6 +815,46 @@ public class AdminService {
                 .build());
     }
 
+    public void getStatAboutFileDownloadChapters(Message message) {
+        List<Object[]> rawData = awsUrlRepository.findTopUsersByFileSizeRaw();
+
+        List<UserFileSizeDto> userFileSizeStats = rawData.stream()
+                .map(row -> new UserFileSizeDto(((Number) row[0]).longValue(), ((Number) row[1]).doubleValue()))
+                .toList();
+
+        StringBuilder stringBuilder = new StringBuilder();
+        int i = 0;
+        for (UserFileSizeDto userFileSizeDto : userFileSizeStats) {
+            User user = userRepository.findByUserId(userFileSizeDto.getUserId());
+            stringBuilder.append(++i).append(". ").append(user.getUserName() != null ? "@" + user.getUserName() : user.getFirstName() + "\n" + user.getUserId()).append(" - ").append(userFileSizeDto.getTotalSizeMb()).append(" MB\n");
+        }
+
+        telegramSender.send(SendMessage.builder()
+                .text(stringBuilder.toString())
+                .chatId(message.getFrom().getId())
+                .build());
+    }
+
+    public void getStatAboutFileDownloadChaptersForLastWeek(Message message) {
+        List<Object[]> rawData = awsUrlRepository.findTopUsersByFileSizeForLastWeek();
+
+        List<UserFileSizeDto> userFileSizeStats = rawData.stream()
+                .map(row -> new UserFileSizeDto(((Number) row[0]).longValue(), ((Number) row[1]).doubleValue()))
+                .toList();
+
+        StringBuilder stringBuilder = new StringBuilder();
+        int i = 0;
+        for (UserFileSizeDto userFileSizeDto : userFileSizeStats) {
+            User user = userRepository.findByUserId(userFileSizeDto.getUserId());
+            stringBuilder.append(++i).append(". ").append(user.getUserName() != null ? "@" + user.getUserName() : user.getFirstName() + "\n" + user.getUserId()).append(" - ").append(userFileSizeDto.getTotalSizeMb()).append(" MB\n");
+        }
+
+        telegramSender.send(SendMessage.builder()
+                .text(stringBuilder.toString())
+                .chatId(message.getFrom().getId())
+                .build());
+    }
+
     public void writeDownloadChaptersStat() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
         StringBuilder stringBuilder = new StringBuilder("Всего глав загружено (уникальных): ");
@@ -795,28 +865,34 @@ public class AdminService {
         List<Object[]> results = statisticEntityRepository.findUserChapterStatistics();
         int i = 0;
         results.sort((a, b) -> ((Number) b[1]).intValue() - ((Number) a[1]).intValue());
+        List<MessageEntity> entities = new ArrayList<>();
         for (Object[] result : results) {
             i++;
             Long userId = ((Number) result[0]).longValue();
             long totalChapters = ((Number) result[1]).longValue();
             User user = userRepository.findByUserId(userId);
-            stringBuilder.append(i).append(". ").append(user.getFirstName()).append(" - ").append(totalChapters).append("\n");
+            String userFirstLastName = user.getFirstName() + " " + (user.getLastName() != null ? user.getLastName() : "");
+            stringBuilder.append(i).append(". ");
+            if ((user.getPrivateSettings() != null && !user.getPrivateSettings().equals("RESTRICT") && user.getUserName() != null) || (user.getPrivateSettings() == null && user.getUserName() != null)) {
+                entities.add(util.getUrlEntity(user.getUserName(), stringBuilder.length(), userFirstLastName.length()));
+            }
+            stringBuilder.append(userFirstLastName).append(" - ").append(totalChapters).append("\n");
             if (i >= 20) {
                 break;
             }
         }
 
         stringBuilder.append("\n\nОбновлено: ").append(dateFormat.format(new Timestamp(System.currentTimeMillis())));
-
         Post postWithStat = postRepositoryInterface.findFirstByIsCreative(true);
+
         if (postWithStat == null) {
             Post post = new Post();
             post.setCreative(true);
             post.setMessageId(telegramSender.sendDocument(SendDocument.builder()
                     .document(new InputFile("CgACAgQAAxkBAAEBBjFmFr3Q2PuaPQNW8C_1v2Pqe7yzKwACWgMAApa_NVJatQ1Gi_sfhjQE"))
                     .chatId("-1002051140659")
-                    .caption(stringBuilder.toString())
-                    .parseMode("HTML").build()).getMessageId());
+                    .captionEntities(entities)
+                    .caption(stringBuilder.toString()).build()).getMessageId());
             postRepositoryInterface.save(post);
             telegramSender.sendPinChatMessage(PinChatMessage.builder()
                     .chatId("-1002051140659")
@@ -827,14 +903,14 @@ public class AdminService {
                         .caption(stringBuilder.toString())
                         .messageId(postWithStat.getMessageId())
                         .chatId("-1002051140659")
-                        .parseMode("HTML").build());
+                        .captionEntities(entities).build());
             } catch (ExecutionException | InterruptedException | TelegramApiException e) {
                 Post post = postRepositoryInterface.findFirstByIsCreative(true);
                 post.setMessageId(telegramSender.sendDocument(SendDocument.builder()
                         .document(new InputFile("CgACAgQAAxkBAAEBBjFmFr3Q2PuaPQNW8C_1v2Pqe7yzKwACWgMAApa_NVJatQ1Gi_sfhjQE"))
                         .chatId("-1002051140659")
                         .caption(stringBuilder.toString())
-                        .parseMode("HTML").build()).getMessageId());
+                        .captionEntities(entities).build()).getMessageId());
                 postRepositoryInterface.save(post);
                 telegramSender.sendPinChatMessage(PinChatMessage.builder()
                         .chatId("-1002051140659")
@@ -845,6 +921,114 @@ public class AdminService {
 
     public boolean isAdmin(Long userId) {
         return userId.equals(5672999915L) || userId.equals(6298804214L);
+    }
+
+
+    public void updateUrlForAllObjects() {
+
+        long startTime = System.nanoTime();
+        Integer messageId = telegramSender.send(SendMessage.builder()
+                .text("Na")
+                .chatId(6298804214L).build()).getMessageId();
+
+        List<ChapterDto> chapterDtoList = mangaChapterRepository.findChapterDtoByTelegraphUrlIsNotNull();
+        chapterDtoList.sort(Comparator.comparing(ChapterDto::getId));
+
+        int i = 0;
+        int j = 0;
+
+        for (int k = 0; k < chapterDtoList.size(); ) {
+            try {
+                System.out.println(chapterDtoList.get(k).getId());
+                ObjectMapper objectMapper = new ObjectMapper();
+                objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+                Response response = telegraphApiFeignClient.getPage(new GetPage(chapterDtoList.get(k).getTelegraphUrl().substring("https://telegra.ph/".length())).setReturnContent(true));
+                String jsonResponse = new String(response.body().asInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                PageResponse result = objectMapper.readValue(jsonResponse, PageResponse.class);
+                Page page = result.getResult();
+                if (page != null) {
+                    ObjectMapper objectMapper1 = new ObjectMapper();
+                    objectMapper1.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+
+                    List<Node> content = updateImageUrls(page.getContent());
+                    EditPage editPage = new EditPage("18191ed015e6a3277096833314a8bc671b7065c9b5141d182b651e9b9eef", page.getPath(), page.getTitle(), content);
+                    editPage.setAuthorName(page.getAuthorName());
+                    editPage.setAuthorUrl(page.getAuthorUrl());
+
+                    Response response1 = telegraphApiFeignClient.editPage(editPage);
+                    String jsonResponse1 = new String(response1.body().asInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                    PageResponse result1 = objectMapper1.readValue(jsonResponse1, PageResponse.class);
+                    Page page1 = result1.getResult();
+                    Thread.sleep(4000);
+                    long endTime = System.nanoTime();
+                    Duration duration = Duration.ofNanos(endTime - startTime);
+                    String formattedTime = DateTimeFormatter.ofPattern("HH:mm:ss.SSS").format(LocalTime.MIDNIGHT.plus(duration));
+                    if (page1 != null) {
+                        i++;
+                        k++;
+                        if (i % 5 == 0) {
+                            telegramSender.sendEditMessageText(EditMessageText.builder()
+                                    .messageId(messageId)
+                                    .text(i + " из " + chapterDtoList.size() + "\n\n" + j + "\n\nПрошло: " + formattedTime)
+                                    .chatId(6298804214L).build());
+                        }
+                    } else {
+                        ErrorResponse errorResponse = objectMapper1.readValue(jsonResponse1, ErrorResponse.class);
+                        if (errorResponse.getError().contains("FLOOD_WAIT_")) {
+                            int milliseconds = Integer.parseInt(errorResponse.getError().substring("FLOOD_WAIT_".length())) * 1000;
+                            telegramSender.sendEditMessageText(EditMessageText.builder()
+                                    .messageId(messageId)
+                                    .text(i + " из " + chapterDtoList.size() + "\n\n" + j + "\n" + jsonResponse1 + "\n\nПрошло: " + formattedTime)
+                                    .chatId(6298804214L).build());
+                            Thread.sleep(milliseconds + 1000);
+                        } else {
+                            telegramSender.send(SendMessage.builder()
+                                    .text(i + " из " + chapterDtoList.size() + "\n\n" + j + "\n" + jsonResponse1 + "\n\nПрошло: " + formattedTime)
+                                    .chatId(6298804214L).build());
+                            k++;
+                            j++;
+                        }
+
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+        }
+    }
+
+
+    public List<Node> updateImageUrls(List<Node> content) {
+        if (content == null || content.isEmpty()) {
+            return null; // Если контент пустой, ничего делать не нужно
+        }
+
+        for (Node node : content) {
+            if (node instanceof NodeElement) {
+                NodeElement element = (NodeElement) node;
+
+                // Проверяем, что это тег <img>
+                if ("img".equalsIgnoreCase(element.getTag())) {
+                    Map<String, String> attributes = element.getAttrs();
+                    if (attributes != null && attributes.containsKey("src")) {
+                        // Получаем URL и заменяем его
+                        String originalUrl = attributes.get("src");
+                        String updatedUrl = originalUrl.replace(
+                                "https://gorillastorage.s3.eu-north-1.amazonaws.com/",
+                                "https://drym3wnf5xeuy.cloudfront.net/"
+                        );
+
+                        // Обновляем URL
+                        attributes.put("src", updatedUrl);
+                    }
+                }
+            }
+        }
+
+        return content;
     }
 
 

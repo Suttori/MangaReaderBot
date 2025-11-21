@@ -11,6 +11,8 @@ import com.itextpdf.layout.element.Image;
 import com.suttori.dao.*;
 import com.suttori.dto.ChapterDto;
 import com.suttori.entity.*;
+import com.suttori.entity.MangaDesu.Page;
+import com.suttori.entity.MangaDesu.PageResponse;
 import com.suttori.exception.CatalogNotFoundException;
 import com.suttori.telegram.TelegramSender;
 import com.suttori.telegram.TelegraphApiFeignClient;
@@ -26,7 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.AnswerInlineQuery;
-import org.telegram.telegrambots.meta.api.methods.CopyMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
@@ -35,7 +36,6 @@ import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.inputmessagecontent.InputTextMessageContent;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResult;
 import org.telegram.telegrambots.meta.api.objects.inlinequery.result.InlineQueryResultArticle;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegraph.api.methods.CreatePage;
 import org.telegram.telegraph.api.objects.Node;
 import org.telegram.telegraph.api.objects.NodeElement;
@@ -66,6 +66,7 @@ public class MangaUtil {
     private MangaStatusParameterRepository mangaStatusParameterRepository;
 
     private TelegraphApiFeignClient telegraphApiFeignClient;
+
 
     @Autowired
     public MangaUtil(ReadStatusRepository readStatusRepository, TelegramSender telegramSender, Util util, MangaChapterRepository mangaChapterRepository, UserSortPreferencesRepository userSortPreferencesRepository, MangaStatusParameterRepository mangaStatusParameterRepository, TelegraphApiFeignClient telegraphApiFeignClient) {
@@ -126,7 +127,7 @@ public class MangaUtil {
         String downloadStatus;
         String readStatus;
         for (int j = offset; j < limit; j++) {
-            if ((user.getMangaFormatParameter() == null && (isNotLongStripMangaDex(sortedChapters.get(j)) || isMangaDesuMe(sortedChapters.get(j)))) || (user.getMangaFormatParameter() != null && user.getMangaFormatParameter().equals("telegraph"))) {
+            if ((user.getMangaFormatParameter() == null && (isNotLongStripMangaDex(sortedChapters.get(j)) || isMangaDesuMe(sortedChapters.get(j)) || isNotWebUsagi(sortedChapters.get(j)))) || (user.getMangaFormatParameter() != null && user.getMangaFormatParameter().equals("telegraph"))) {
                 if (sortedChapters.get(j).getTelegraphStatusDownload() != null && sortedChapters.get(j).getTelegraphStatusDownload().equals("finished")) {
                     downloadStatus = "✔️ Загружена";
                 } else {
@@ -140,12 +141,11 @@ public class MangaUtil {
                 }
             }
 
-
             readStatus = readStatusRepository.existsByMangaIdAndChapterIdAndUserIdAndCatalogName(sortedChapters.get(j).getMangaId(), sortedChapters.get(j).getChapterId(), user.getUserId(), sortedChapters.get(0).getCatalogName()) ? "✔️ Прочитана" : "Не прочитана";
 
             inlineQueryResultList.add(InlineQueryResultArticle.builder()
                     .id(inlineQuery.getFrom().getId() + "" + i++)
-                    .title("Том " + sortedChapters.get(j).getVol() + ". Глава " + sortedChapters.get(j).getChapter())
+                    .title("Том " + sortedChapters.get(j).getVol() + ". Глава " + sortedChapters.get(j).getChapter() + (sortedChapters.get(j).getChapterName() != null ? " " + sortedChapters.get(j).getChapterName() : ""))
                     .description(downloadStatus + "\n" + readStatus)
                     .thumbnailUrl("https://gorillastorage.s3.eu-north-1.amazonaws.com/MangaReaderBot/hand-drawn-vintage-comic-illustration_23-2149624608.jpg")
                     .inputMessageContent(new InputTextMessageContent(catalogName + "\nchapterId\n" + sortedChapters.get(j).getId())).build());
@@ -166,7 +166,12 @@ public class MangaUtil {
         return chapter.getCatalogName().equals("desu.me") && chapter.getType() != null && (chapter.getType().equals("manga") || chapter.getType().equals("one_shot") || chapter.getType().equals("comics"));
     }
 
+    public boolean isNotWebUsagi(Chapter chapter) {
+        return chapter.getCatalogName().equals("usagi") && chapter.getFormat() == null || (chapter.getFormat() != null && !chapter.getFormat().contains("Веб"));
+    }
+
     public File getJpeg(File folder, File file, String fileName) {
+        //TODO
         try {
             FFmpeg ffmpeg = new FFmpeg();
             FFprobe ffprobe = new FFprobe();
@@ -174,14 +179,14 @@ public class MangaUtil {
             FFmpegBuilder builder = new FFmpegBuilder()
                     .setInput(file.getPath())
                     .overrideOutputFiles(true)
-                    .addOutput(new java.io.File(folder + File.separator + "output_img" + fileName + ".jpeg").getPath())
-                    .setVideoCodec("mjpeg")
+                    .addOutput(new java.io.File(folder + File.separator + "output_img" + fileName + ".png").getPath())
+                    .setVideoCodec("png")
                     .setVideoResolution(photoStream.width, photoStream.height)
                     .done();
             FFmpegExecutor executor = new FFmpegExecutor(ffmpeg);
             executor.createJob(builder).run();
             file.delete();
-            return new File(folder + File.separator + "output_img" + fileName + ".jpeg");
+            return new File(folder + File.separator + "output_img" + fileName + ".png");
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -213,11 +218,13 @@ public class MangaUtil {
         }
     }
 
-    public Integer sendWaitGIFAndAction(Long userId) {
+    public Integer sendWaitGIFAndAction(Long userId, String downloadStatusText) {
+        //TODO
         Integer messageId = telegramSender.sendDocument(SendDocument.builder()
                 .chatId(userId)
-                .caption("Твоя глава уже загружается, обычно это занимает не больше минуты, спасибо за ожидание\n\nВ боте предусмотрена автоматическая предзагрузка глав, поэтому пока ты будешь читать текующую главу, следующая уже будет загружена")
-                .document(new InputFile("CgACAgQAAxkBAAICV2XKAyJ_d0xIoK5tTXiI14xVYCB5AAKJCwACye1AUZtzbClFKHTFNAQ")).build()).getMessageId();
+                .caption(downloadStatusText)
+                .document(new InputFile("CgACAgQAAxkBAAICV2XKAyJ_d0xIoK5tTXiI14xVYCB5AAKJCwACye1AUZtzbClFKHTFNAQ")).build()).getMessageId(); //orig
+                //.document(new InputFile("CgACAgQAAxkBAAEBIYlnJ86vH-QV6tkNP0v0Bh6g0S5WMQACJgMAAnYkXVDkFPnPSGw6FzYE")).build()).getMessageId(); // spring
         telegramSender.sendChatAction(userId, "upload_document");
         return messageId;
     }
@@ -258,6 +265,7 @@ public class MangaUtil {
         chapter.setPdfStatusDownload(dto.getPdfStatusDownload());
         chapter.setTelegraphMessageId(dto.getTelegraphMessageId());
         chapter.setTelegraphStatusDownload(dto.getTelegraphStatusDownload());
+        chapter.setChapterName(dto.getChapterName());
         return chapter;
     }
 
@@ -316,7 +324,6 @@ public class MangaUtil {
     }
 
 
-
     public UserSortPreferences getUserSortPreferences(Long userId, String catalogName) {
         return userSortPreferencesRepository.findByUserIdAndCatalogName(userId, catalogName);
     }
@@ -335,9 +342,6 @@ public class MangaUtil {
             }
         }
     }
-
-
-
 
 
 }

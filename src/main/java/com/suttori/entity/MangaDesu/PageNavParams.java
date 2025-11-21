@@ -8,6 +8,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PageNavParams {
     private Integer count;
     private Integer page;
