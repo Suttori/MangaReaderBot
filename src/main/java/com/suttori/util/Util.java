@@ -3,10 +3,13 @@ package com.suttori.util;
 
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
+import com.suttori.config.ServiceConfig;
 import com.suttori.entity.MangaDesu.MangaGenre;
+import com.suttori.exception.CatalogNotFoundException;
 import com.suttori.service.LocaleService;
 import com.suttori.telegram.TelegramSender;
 import feign.Response;
+import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,19 +27,17 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
+@Slf4j
 public class Util {
 
     private TelegramSender telegramSender;
-    private LocaleService localeService;
+
 
     @Autowired
-    public Util(TelegramSender telegramSender, LocaleService localeService) {
+    public Util(TelegramSender telegramSender) {
         this.telegramSender = telegramSender;
-        this.localeService = localeService;
     }
 
     public String getPhotoFieldId(Message message) {
@@ -46,21 +47,21 @@ public class Util {
                 .orElseThrow().getFileId();
     }
 
-
     public String[] parseValue(String string) {
         return string.split("\n");
     }
 
-    public Integer sendWaitGIFAndAction(Long userId) {
-        Integer messageId = telegramSender.sendDocument(SendDocument.builder()
-                .chatId(userId)
-                .caption(localeService.getBundle("util.groupMonkeyWork"))
-                .document(new InputFile("CgACAgQAAxkBAAIIB2Tog91yVaHlULK6vjynEfSj7kNzAAIgAgACEi-NUkbaXykgwa-yMAQ")).build()).getMessageId();
-
-        telegramSender.sendChatAction(userId, "choose_sticker");
-        return messageId;
-        //CgACAgQAAxkBAAIIB2Tog91yVaHlULK6vjynEfSj7kNzAAIgAgACEi-NUkbaXykgwa-yMAQ
-        //CgACAgIAAxkBAAIHuWToe1MO21Emx7I-u9Twvx6EodCpAAK8DQACOMV5SS_-4lBex3urMAQ
+    public String getSourceName(String string) throws CatalogNotFoundException {
+        String[] parts = string.split("\n");
+        if (parts.length == 0) {
+            throw new CatalogNotFoundException("Пустая строка без разделителя.");
+        }
+        String sourceName = parts[0];
+        if (sourceName.equals("desu.me") || sourceName.equals("mangadex.org") || sourceName.equals("usagi")) {
+            return sourceName;
+        } else {
+            throw new CatalogNotFoundException("Каталог " + sourceName + " не найден");
+        }
     }
 
     public void sendErrorMessage(String error, Long userId) {
@@ -70,25 +71,11 @@ public class Util {
                 .build());
     }
 
-    public void sendErrorMessage(String error, Long userId, InlineKeyboardMarkup inlineKeyboardMarkup) {
+    public void sendInfoMessage(String error, Long userId) {
         telegramSender.send(SendMessage.builder()
                 .chatId(userId)
                 .text(error)
-                .replyMarkup(inlineKeyboardMarkup)
                 .build());
-    }
-
-    public int[] getTargetSides(int originalWidth, int originalHeight) {
-        int targetSideSize = 512;
-        int newWidth, newHeight;
-        if (originalWidth > originalHeight) {
-            newWidth = targetSideSize;
-            newHeight = (int) ((double) originalHeight / originalWidth * targetSideSize);
-        } else {
-            newHeight = targetSideSize;
-            newWidth = (int) ((double) originalWidth / originalHeight * targetSideSize);
-        }
-        return new int[]{newWidth, newHeight};
     }
 
     public File createStorageFolder(String nameFolder) {
@@ -103,7 +90,7 @@ public class Util {
         java.io.File file = new java.io.File(folder, filePath);
         try {
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestProperty("Referer", "https://desu.win/");
+            connection.setRequestProperty("Referer", "https://x.desu.city/");
             try (InputStream in = connection.getInputStream();
                  OutputStream out = new FileOutputStream(file)) {
                 byte[] buffer = new byte[8192];
@@ -118,11 +105,137 @@ public class Util {
         return file;
     }
 
+    public java.io.File downloadFileWithoutReferrer(java.io.File folder, URL url, String filePath) {
+        java.io.File file = new java.io.File(folder, filePath);
+        try {
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            try (InputStream in = connection.getInputStream();
+                 OutputStream out = new FileOutputStream(file)) {
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return file;
+    }
+
+    public java.io.File downloadFileWithReferrer(java.io.File folder, URL url, String fileName, String referer) {
+        java.io.File file = new java.io.File(folder, fileName);
+        try {
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestProperty("Referer", referer);
+            try (InputStream in = connection.getInputStream();
+                 OutputStream out = new FileOutputStream(file)) {
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                }
+            }
+        } catch (IOException e) {
+            return null;
+        }
+        return file;
+    }
+
+    public long getFileSize(String fileUrl, String referer) {
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URL(fileUrl);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Referer", referer);
+
+            try (InputStream inputStream = connection.getInputStream();
+                 ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+                byte[] data = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(data, 0, data.length)) != -1) {
+                    buffer.write(data, 0, bytesRead);
+                }
+                byte[] fileData = buffer.toByteArray();
+                return fileData.length;
+            }
+        } catch (IOException e) {
+            return 0;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    public long getFileSize(String fileUrl) {
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URL(fileUrl);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+
+            try (InputStream inputStream = connection.getInputStream();
+                 ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+                byte[] data = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(data, 0, data.length)) != -1) {
+                    buffer.write(data, 0, bytesRead);
+                }
+                byte[] fileData = buffer.toByteArray();
+                return fileData.length;
+            }
+        } catch (IOException e) {
+            return 0;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
     public ImageData downloadImageWithReferer(String imageUrl) {
         try {
             URL url = new URL(imageUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestProperty("Referer", "https://desu.win/");
+            connection.setRequestProperty("Referer", "https://x.desu.city/");
+            try (InputStream in = connection.getInputStream()) {
+                byte[] imageBytes = in.readAllBytes();
+                return ImageDataFactory.create(imageBytes);
+            }
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    public File downloadImageWithReferer(String imageUrl, File saveDir, String fileName) {
+        try {
+            URL url = new URL(imageUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestProperty("Referer", "https://x.desu.city/");
+
+            File savedFile = new File(saveDir, fileName);
+            try (InputStream in = connection.getInputStream();
+                 FileOutputStream fos = new FileOutputStream(savedFile)) {
+
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    fos.write(buffer, 0, bytesRead);
+                }
+            }
+
+            return savedFile;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ImageData downloadImage(String imageUrl) {
+        try {
+            URL url = new URL(imageUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             try (InputStream in = connection.getInputStream()) {
                 byte[] imageBytes = in.readAllBytes();
                 return ImageDataFactory.create(imageBytes);
@@ -157,23 +270,12 @@ public class Util {
         }
     }
 
-    public String getGenres(List<MangaGenre> mangaGenreList) {
-        StringBuilder stringBuilder = new StringBuilder();
-        for (MangaGenre mangaGenre : mangaGenreList) {
-            stringBuilder.append(mangaGenre.getRussian()).append(", ");
-        }
-        return stringBuilder.toString();
+    public MessageEntity getUrlEntity(String username, int offset, int length) {
+        return MessageEntity.builder()
+                .length(length)
+                .url("https://t.me/" + username)
+                .offset(offset)
+                .type("text_link").build();
     }
-
-    public String getStatus(String status) {
-        return switch (status) {
-            case "ongoing" -> "Выходит";
-            case "released" -> "Издано";
-            case "continued" -> "Переводится";
-            case "completed" -> "Завершено";
-            default -> "none";
-        };
-    }
-
 
 }

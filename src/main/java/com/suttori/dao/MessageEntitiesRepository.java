@@ -10,7 +10,6 @@ import java.util.ArrayList;
 @Repository
 public interface MessageEntitiesRepository extends JpaRepository<MessageFormatting, Long> {
 
-
     ArrayList<MessageFormatting> findMessageFormattingByPostId(@Param("post_id") Long postId);
 
 }

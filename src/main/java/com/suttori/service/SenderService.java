@@ -42,28 +42,26 @@ public class SenderService {
     private TelegramSender telegramSender;
     private Util util;
     private BotConfig botConfig;
-    private MangaService mangaService;
 
     private final Logger logger = LoggerFactory.getLogger(SenderService.class);
 
-    @Autowired
     private UserRepository userRepository;
-    @Autowired
     private PostRepositoryInterface postRepositoryInterface;
-    @Autowired
     private MediaGroupRepository mediaGroupRepository;
-    @Autowired
     private MessageEntitiesRepository messageEntitiesRepository;
-    @Autowired
     private TelegramApiFeignClient telegramApiFeignClient;
 
-
-    public SenderService(MessageService messageService, TelegramSender telegramSender, Util util, BotConfig botConfig, MangaService mangaService) {
+    @Autowired
+    public SenderService(MessageService messageService, TelegramSender telegramSender, Util util, BotConfig botConfig, UserRepository userRepository, PostRepositoryInterface postRepositoryInterface, MediaGroupRepository mediaGroupRepository, MessageEntitiesRepository messageEntitiesRepository, TelegramApiFeignClient telegramApiFeignClient) {
         this.messageService = messageService;
         this.telegramSender = telegramSender;
         this.util = util;
         this.botConfig = botConfig;
-        this.mangaService = mangaService;
+        this.userRepository = userRepository;
+        this.postRepositoryInterface = postRepositoryInterface;
+        this.mediaGroupRepository = mediaGroupRepository;
+        this.messageEntitiesRepository = messageEntitiesRepository;
+        this.telegramApiFeignClient = telegramApiFeignClient;
     }
 
     public List<User> publish(CallbackQuery callbackQuery) {
@@ -242,7 +240,7 @@ public class SenderService {
                 .messageId(callbackQuery.getMessage().getMessageId())
                 .chatId(callbackQuery.getFrom().getId()).build());
 
-        List<User> users = userRepository.findAllByPremiumBotUserIsNull();
+        List<User> users = userRepository.findAll();
         List<User> userList = telegramSender.prepareSendAdsThread(users, (Message) callbackQuery.getMessage());
 
         long endTime = System.nanoTime();
@@ -364,23 +362,21 @@ public class SenderService {
         }
     }
 
-    public void sendNotificationToUsers(List<Long> userList, Long mangaId, Long lastChapter) {
+    public void sendNotificationToUsers(List<Long> userList, Manga manga, String lastChapter) {
         String inlineKeyboardMarkup = null;
-
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             inlineKeyboardMarkup = objectMapper.writeValueAsString(new InlineKeyboardMarkup(new ArrayList<>(List.of(
-                   new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Перейти к манге")).callbackData("sendMangaById\n" + mangaId).build())
+                    new InlineKeyboardRow(InlineKeyboardButton.builder().text(EmojiParser.parseToUnicode("Перейти к манге")).callbackData(manga.getCatalogName() + "\nmangaDatabaseId\n" + manga.getId()).build())
             ))));
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
 
-
         int counter = 0;
 
         Post post = new Post();
-        post.setText("В манге \"" + mangaService.getMangaData(mangaId).getRussian() + "\" вышла " + lastChapter + " глава!");
+        post.setText("В манге \"" + manga.getName() + "\" вышла " + lastChapter + " глава!");
         post.setTextMessage(true);
         post.setDisableWebPagePreview(true);
         post.setDisableNotification(false);
@@ -406,7 +402,6 @@ public class SenderService {
                 default:
                     logger.error("Message was NOT delivered to " + userId + " | " + util.getInfoError(response) + " try " + counter);
                     break;
-
             }
         }
     }

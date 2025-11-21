@@ -1,5 +1,6 @@
 package com.suttori.telegram;
 
+import com.suttori.config.BotConfig;
 import com.suttori.entity.PostToDelete;
 import com.suttori.entity.User;
 import feign.Response;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.*;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatAdministrators;
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
+import org.telegram.telegrambots.meta.api.methods.invoices.CreateInvoiceLink;
+import org.telegram.telegrambots.meta.api.methods.invoices.SendInvoice;
 import org.telegram.telegrambots.meta.api.methods.pinnedmessages.PinChatMessage;
 import org.telegram.telegrambots.meta.api.methods.send.*;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.*;
@@ -47,6 +50,26 @@ public class TelegramSender {
         this.telegramApiFeignClient = telegramApiFeignClient;
     }
 
+
+    public String createInvoiceLink(CreateInvoiceLink createInvoiceLink) {
+        try {
+            return telegramClient.executeAsync(createInvoiceLink).get();
+        } catch (InterruptedException | ExecutionException | TelegramApiException e) {
+            logger.error("Failed send createInvoiceLink", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Message sendInvoice(SendInvoice sendInvoice) {
+        logger.info("send " + sendInvoice.getChatId());
+        try {
+            return telegramClient.executeAsync(sendInvoice).get();
+        } catch (InterruptedException | ExecutionException | TelegramApiException e) {
+            logger.error("Failed send " + sendInvoice.getChatId(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
     public Message send(SendMessage sendMessage) {
         logger.info("send " + sendMessage.getChatId());
         try {
@@ -59,31 +82,43 @@ public class TelegramSender {
 
     public void sendEditMessageText(EditMessageText editMessageText) {
         logger.info("sendEditMessageText " + editMessageText.getChatId());
-        executorService.submit(() -> {
-            try {
-                telegramClient.executeAsync(editMessageText);
-            } catch (TelegramApiException e) {
-                logger.error("Failed sendEditMessageText " + editMessageText.getChatId(), e);
-            }
-        });
+        try {
+            telegramClient.execute(editMessageText);
+        } catch (TelegramApiException e) {
+            logger.error("Failed send " + editMessageText.getChatId(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Message sendEditMessageTextAsync(EditMessageText editMessageText) {
+        logger.info("sendEditMessageTextAsync " + editMessageText.getChatId());
+        try {
+            return (Message) telegramClient.executeAsync(editMessageText).get();
+        } catch (InterruptedException | ExecutionException | TelegramApiException e) {
+            logger.error("Failed sendEditMessageTextAsync " + editMessageText.getChatId(), e);
+        }
+        return null;
     }
 
     public void sendAnswerCallbackQuery(AnswerCallbackQuery answerCallbackQuery) {
         logger.info("answerCallbackQuery " + answerCallbackQuery.getCallbackQueryId());
         executorService.submit(() -> {
             try {
-                telegramClient.executeAsync(answerCallbackQuery);
-            } catch (TelegramApiException e) {
+                telegramClient.executeAsync(answerCallbackQuery).get();
+            } catch (TelegramApiException | ExecutionException | InterruptedException e) {
                 logger.error("Failed sendEditMessageText " + answerCallbackQuery.getCallbackQueryId(), e);
             }
         });
     }
 
-    public void sendPhoto(SendPhoto sendPhoto) {
+    public Message sendPhoto(SendPhoto sendPhoto) {
         logger.info("sendPhoto " + sendPhoto.getChatId());
-        executorService.submit(() -> {
-            telegramClient.executeAsync(sendPhoto);
-        });
+        try {
+            return telegramClient.executeAsync(sendPhoto).get();
+        } catch (InterruptedException | ExecutionException e) {
+            logger.error("sendPhoto " + sendPhoto.getChatId());
+            throw new RuntimeException(e);
+        }
     }
 
     public Message sendEditMessageMedia(EditMessageMedia editMessageMedia) {
@@ -96,12 +131,13 @@ public class TelegramSender {
         }
     }
 
-    public void sendEditMessageCaption(EditMessageCaption editMessageCaption) {
+    public Message sendEditMessageCaption(EditMessageCaption editMessageCaption) {
         logger.info("sendEditMessageCaption " + editMessageCaption.getChatId());
         try {
-            telegramClient.executeAsync(editMessageCaption);
-        } catch (TelegramApiException e) {
+            return (Message) telegramClient.executeAsync(editMessageCaption).get();
+        } catch (TelegramApiException | InterruptedException | ExecutionException e) {
             logger.error("Failed sendEditMessageCaption " + editMessageCaption.getChatId(), e);
+            return null;
         }
     }
 
@@ -121,20 +157,19 @@ public class TelegramSender {
 
     public void sendEditMessageReplyMarkup(EditMessageReplyMarkup editMessageReplyMarkup) {
         logger.info("sendEditMessageReplyMarkup " + editMessageReplyMarkup.getChatId());
-        executorService.submit(() -> {
-            try {
-                telegramClient.executeAsync(editMessageReplyMarkup);
-            } catch (TelegramApiException e) {
-                logger.error("sendEditMessageReplyMarkup " + editMessageReplyMarkup.getChatId(), e);
-            }
-        });
+        try {
+            telegramClient.executeAsync(editMessageReplyMarkup).get();
+        } catch (TelegramApiException | InterruptedException | ExecutionException e) {
+            logger.error("sendEditMessageReplyMarkup " + editMessageReplyMarkup.getChatId(), e);
+        }
+
     }
 
     public void sendForwardMessage(ForwardMessage forwardMessage) {
         logger.info("SendForwardMessage " + forwardMessage.getChatId());
         try {
-            telegramClient.executeAsync(forwardMessage);
-        } catch (TelegramApiException e) {
+            telegramClient.executeAsync(forwardMessage).get();
+        } catch (TelegramApiException | InterruptedException | ExecutionException e) {
             logger.error("sendForwardMessage " + forwardMessage.getChatId(), e);
         }
     }
@@ -149,23 +184,35 @@ public class TelegramSender {
         }
     }
 
-    public void resendCopyMessageFromStorage(CopyMessage copyMessage) throws ExecutionException, InterruptedException {
-        logger.info("sendCopyMessageFromStorage " + copyMessage.getChatId());
+    public void sendCopyMessages(CopyMessages copyMessages) {
+        logger.info("sendCopyMessages " + copyMessages.getChatId());
         try {
-            telegramClient.executeAsync(copyMessage);
-            checkChannelSubscribe(Long.valueOf(copyMessage.getChatId()));
-        } catch (TelegramApiException e) {
+            telegramClient.executeAsync(copyMessages).get();
+        } catch (ExecutionException | InterruptedException | TelegramApiException e) {
+            logger.error("Failed sendCopyMessages " + copyMessages.getChatId(), e);
             throw new RuntimeException(e);
         }
+    }
+
+    public void resendCopyMessageFromStorage(CopyMessage copyMessage) throws ExecutionException, InterruptedException {
+        logger.info("resendCopyMessageFromStorage " + copyMessage.getChatId());
+        try {
+            telegramClient.executeAsync(copyMessage).get().getMessageId();
+            checkChannelSubscribe(Long.valueOf(copyMessage.getChatId()));
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+
+
     }
 
     public void sendCopyMessageFromStorage(CopyMessage copyMessage) {
         logger.info("sendCopyMessageFromStorage " + copyMessage.getChatId());
         try {
-            telegramClient.executeAsync(copyMessage);
+            telegramClient.executeAsync(copyMessage).get();
             checkChannelSubscribe(Long.valueOf(copyMessage.getChatId()));
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
+        } catch (TelegramApiException | InterruptedException | ExecutionException e) {
+            e.printStackTrace();
         }
     }
 
@@ -177,8 +224,8 @@ public class TelegramSender {
     public void sendEditMessage(EditMessageText editMessageText) {
         logger.info("sendEditMessage " + editMessageText.getChatId());
         try {
-            telegramClient.executeAsync(editMessageText);
-        } catch (TelegramApiException e) {
+            telegramClient.executeAsync(editMessageText).get();
+        } catch (TelegramApiException | InterruptedException | ExecutionException e) {
             logger.error("sendEditMessage " + editMessageText.getChatId(), e);
         }
     }
@@ -216,8 +263,8 @@ public class TelegramSender {
     public void deleteMessageById(String chatId, Integer messageId) {
         DeleteMessage deleteMessage = new DeleteMessage(chatId, messageId);
         try {
-            telegramClient.executeAsync(deleteMessage);
-        } catch (TelegramApiException tae) {
+            telegramClient.executeAsync(deleteMessage).get();
+        } catch (TelegramApiException | InterruptedException | ExecutionException tae) {
             throw new RuntimeException(tae);
         }
     }
@@ -249,27 +296,24 @@ public class TelegramSender {
     }
 
     public List<User> prepareSendAdsThread(List<User> users, Message message) {
-        AtomicInteger counter = new AtomicInteger(0);
-        EditMessageText editMessageText = new EditMessageText("");
-        editMessageText.setChatId(message.getChatId());
-        editMessageText.setMessageId(message.getMessageId());
-        final double[] percent = {0.01};
-        int totalCount = users.size();
-        int fivePercent = (int) Math.round(totalCount * percent[0]);
+        EditMessageText editMessageText = EditMessageText.builder()
+                .messageId(message.getMessageId())
+                .text("")
+                .chatId(message.getChatId()).build();
 
-        logger.info(String.valueOf(ForkJoinPool.commonPool()));
+        int totalUsers = users.size();
 
-        return users.parallelStream()
-                .peek(user -> {
-                    int currentCounter = counter.incrementAndGet();
-                    if (fivePercent != 0 && currentCounter % fivePercent == 0) {
-                        editMessageText.setText("Пройдено " + Math.round(percent[0] * 100) + "%");
-                        sendEditMessageText(editMessageText);
-                        percent[0] += 0.01;
-                    }
-                })
-                .filter(user -> telegramApiFeignClient.sendChatAction(token, user.getChatId(), "typing").reason().equals("OK"))
-                .collect(Collectors.toList());
+        List<User> filteredUsers = new ArrayList<>();
+        for (int i = 0; i < totalUsers; i++) {
+            if ((i != 0 && i % 200 == 0) || i == totalUsers - 1) {
+                editMessageText.setText("Пройдено " + i + " из " + totalUsers);
+                sendEditMessageText(editMessageText);
+            }
+            if (telegramApiFeignClient.sendChatAction(token, users.get(i).getChatId(), "typing").reason().equals("OK")) {
+                filteredUsers.add(users.get(i));
+            }
+        }
+        return filteredUsers;
     }
 
     public List<User> prepareDeleteDeadThread(List<User> users, Message message) {
@@ -330,9 +374,9 @@ public class TelegramSender {
 
     public void sendAnswerInlineQuery(AnswerInlineQuery answerInlineQuery) {
         try {
-            telegramClient.executeAsync(answerInlineQuery);
-        } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
+            telegramClient.executeAsync(answerInlineQuery).get();
+        } catch (TelegramApiException | InterruptedException | ExecutionException e) {
+            e.printStackTrace();
         }
     }
 

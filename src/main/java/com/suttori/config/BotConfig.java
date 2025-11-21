@@ -8,9 +8,11 @@ import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 
+
 @Configuration
 @PropertySource("classpath:application.properties")
 public class BotConfig {
+
     @Value("${bot.name}")
     private String botName;
     @Value("${bot.token}")

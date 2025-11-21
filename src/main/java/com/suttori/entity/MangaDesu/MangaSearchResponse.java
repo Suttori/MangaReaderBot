@@ -2,9 +2,13 @@ package com.suttori.entity.MangaDesu;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
+@Getter
+@Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MangaSearchResponse {
 
@@ -13,20 +17,5 @@ public class MangaSearchResponse {
     @JsonProperty("pageNavParams")
     private PageNavParams pageNavParams;
 
-    public List<MangaDataAsSearchResult> getResponse() {
-        return response;
-    }
-
-    public void setResponse(List<MangaDataAsSearchResult> response) {
-        this.response = response;
-    }
-
-    public PageNavParams getPageNavParams() {
-        return pageNavParams;
-    }
-
-    public void setPageNavParams(PageNavParams pageNavParams) {
-        this.pageNavParams = pageNavParams;
-    }
 }
 

@@ -57,9 +57,19 @@ public class UserService {
         }
 
         User user = new User(message.getFrom().getId(), message.getChatId(), message.getFrom().getFirstName(), message.getFrom().getLastName(),
-                message.getFrom().getUserName(), null, message.getFrom().getIsPremium(), message.getFrom().getLanguageCode(),
-                new Timestamp(System.currentTimeMillis()), referral, false, "START", 0);
+                message.getFrom().getUserName(), false, message.getFrom().getIsPremium(), message.getFrom().getLanguageCode(),
+                new Timestamp(System.currentTimeMillis()), referral, false, "START", 0, "desu.me");
         userRepository.save(user);
+    }
+    
+    public void upsertUser(Message message) {
+        userRepository.upsertUser(message.getFrom().getId(),
+                message.getChatId(),
+                message.getFrom().getFirstName(),
+                message.getFrom().getLastName(),
+                message.getFrom().getUserName(),
+                message.getFrom().getLanguageCode(),
+                message.getFrom().getIsPremium());
     }
 
     public boolean checkArabUser(Message message) {
@@ -73,21 +83,24 @@ public class UserService {
                 .chatId(message.getFrom().getId()).build());
     }
 
-    public void setPositionAndMessageId(Long userId, String position) {
-        userRepository.setTemporaryMessageId(null, userId);
+    public void setPosition(Long userId, String position) {
         userRepository.setPosition(position, userId);
     }
 
     public User getUser(Message message) {
-        return userRepository.findUserByChatId(message.getFrom().getId());
+        return userRepository.findByUserId(message.getFrom().getId());
     }
 
     public User getUser(CallbackQuery callbackQuery) {
-        return userRepository.findUserByChatId(callbackQuery.getFrom().getId());
+        return userRepository.findByUserId(callbackQuery.getFrom().getId());
     }
 
     public User getUser(InlineQuery inlineQuery) {
         return userRepository.findUserByChatId(inlineQuery.getFrom().getId());
+    }
+
+    public User getUser(Long userId) {
+        return userRepository.findByUserId(userId);
     }
 
     public String getLocale(Long userId) {
@@ -104,5 +117,9 @@ public class UserService {
 
     public void setLastActivity(Long userId) {
         userRepository.setLastActivity(new Timestamp(System.currentTimeMillis()), userId);
+    }
+
+    public void setSortParam(String param, Long userId) {
+        userRepository.setSortParam(param, userId);
     }
 }

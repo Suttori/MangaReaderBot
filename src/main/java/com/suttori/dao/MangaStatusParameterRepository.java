@@ -11,10 +11,14 @@ import java.util.List;
 @Repository
 public interface MangaStatusParameterRepository extends JpaRepository<MangaStatusParameter, Long> {
 
-        MangaStatusParameter findByMangaIdAndUserId(Long mangaId, Long userId);
+    MangaStatusParameter findByMangaDatabaseIdAndUserId(Long mangaDatabaseId, Long userId);
 
-        ArrayList<MangaStatusParameter> findAllByUserIdAndStatus(Long userId, String status);
+    MangaStatusParameter findByMangaIdAndUserIdAndCatalogName(String mangaId, Long userId, String catalogName);
 
-        ArrayList<MangaStatusParameter> findAllByUserIdAndStatus(Long userId, String status, Pageable pageable);
+    ArrayList<MangaStatusParameter> findAllByUserIdAndStatus(Long userId, String status);
+
+    ArrayList<MangaStatusParameter> findAllByUserIdAndStatus(Long userId, String status, Pageable pageable);
+
+    ArrayList<MangaStatusParameter> findAllByUserId(Long userId);
 
 }
